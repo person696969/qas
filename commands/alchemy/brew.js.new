@@ -1,0 +1,95 @@
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder, ComponentType } = require('discord.js');
+const db = require('../../database.js');
+
+// Define brewing recipes
+const brewingCategories = {
+    beverages: {
+        name: '🍺 Magical Beverages',
+        emoji: '🍺',
+        description: 'Craft refreshing magical drinks',
+        recipes: {
+            ale: { 
+                name: 'Enchanted Ale', 
+                ingredients: { wheat: 3, hops: 2, water: 1 }, 
+                effect: 'Charisma +10%', 
+                duration: 1800, 
+                cost: 100,
+                level: 1,
+                exp: 15,
+                description: 'A magical brew that enhances social abilities',
+                rarity: 'Common',
+                alcohol: 5
+            },
+            wine: { 
+                name: 'Elven Wine', 
+                ingredients: { grape: 5, moonwater: 2, essence: 1 }, 
+                effect: 'Wisdom +15%', 
+                duration: 2400, 
+                cost: 250,
+                level: 5,
+                exp: 35,
+                description: 'A refined beverage that enhances wisdom',
+                rarity: 'Uncommon',
+                alcohol: 8
+            }
+        }
+    }
+};
+
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('brew')
+        .setDescription('🧪 Brew magical potions and elixirs')
+        .addStringOption(option =>
+            option.setName('category')
+                .setDescription('Select the type of brew to craft')
+                .setRequired(true)
+                .addChoices(
+                    { name: '🍺 Magical Beverages', value: 'beverages' }
+                ))
+        .addStringOption(option =>
+            option.setName('recipe')
+                .setDescription('Choose which recipe to brew')
+                .setRequired(true)),
+
+    async execute(interaction) {
+        await interaction.deferReply();
+        
+        try {
+            const category = interaction.options.getString('category');
+            const recipe = interaction.options.getString('recipe');
+            
+            // Check if category exists
+            if (!brewingCategories[category]) {
+                return interaction.editReply('Invalid brewing category selected.');
+            }
+            
+            // Check if recipe exists in category
+            if (!brewingCategories[category].recipes[recipe]) {
+                return interaction.editReply('Invalid recipe selected for this category.');
+            }
+            
+            const selectedRecipe = brewingCategories[category].recipes[recipe];
+            
+            // Create embed for brewing result
+            const brewEmbed = new EmbedBuilder()
+                .setTitle(`🧪 Brewing ${selectedRecipe.name}`)
+                .setDescription(selectedRecipe.description)
+                .addFields(
+                    { name: 'Effect', value: selectedRecipe.effect, inline: true },
+                    { name: 'Duration', value: `${selectedRecipe.duration / 60} minutes`, inline: true },
+                    { name: 'Cost', value: `${selectedRecipe.cost} coins`, inline: true },
+                    { name: 'Level Required', value: selectedRecipe.level.toString(), inline: true },
+                    { name: 'Experience Gained', value: selectedRecipe.exp.toString(), inline: true },
+                    { name: 'Rarity', value: selectedRecipe.rarity, inline: true }
+                )
+                .setColor('#9C59B6');
+
+            await interaction.editReply({ embeds: [brewEmbed] });
+            
+        } catch (error) {
+            console.error('Error in brew command:', error);
+            await interaction.editReply('An error occurred while brewing. Please try again later.');
+        }
+    }
+};
