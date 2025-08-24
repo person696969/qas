@@ -198,8 +198,7 @@ module.exports = {
 
         } catch (error) {
             console.error('Error in workbench command:', error);
-            const reply = interaction.deferred ? interaction.editReply : interaction.reply;
-            await reply.call(interaction, {
+            await interaction.editReply({
                 content: '❌ An error occurred with the workbench command.',
                 ephemeral: true
             });

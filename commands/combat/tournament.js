@@ -171,98 +171,10 @@ module.exports = {
                     .setLabel('Join Tournament')
                     .setStyle(ButtonStyle.Primary);
 
-                const viewButton = new ButtonBuilder()
-                    .setCustomId(`tournament_view_${tournament.id}`)
-                    .setLabel('View Details')
-                    .setStyle(ButtonStyle.Secondary);
+                const row = new ActionRowBuilder()
+                    .addComponents(joinButton);
 
-                const shareButton = new ButtonBuilder()
-                    .setCustomId(`tournament_share_${tournament.id}`)
-                    .setLabel('Share Tournament')
-                    .setStyle(ButtonStyle.Success);
-
-                const row1 = new ActionRowBuilder().addComponents(joinButton, viewButton);
-                const row2 = new ActionRowBuilder().addComponents(shareButton);
-
-                const response = await interaction.editReply({ embeds: [embed], components: [row1, row2] });
-
-                // Handle button interactions
-                const filter = i => i.customId.includes(tournament.id);
-                const collector = response.createMessageComponentCollector({ filter, time: 600000 });
-
-                collector.on('collect', async (i) => {
-                    try {
-                        const action = i.customId.split('_')[1];
-
-                        if (action === 'join') {
-                            if (tournament.addParticipant(i.user)) {
-                                const joinEmbed = new EmbedBuilder()
-                                    .setColor('#32CD32')
-                                    .setTitle(`✅ Joined Tournament ${tournament.id}`)
-                                    .setDescription(`${i.user.tag} has joined the tournament!`)
-                                    .addFields(
-                                        { name: 'Participants', value: `${tournament.participants.length}/${tournament.slots}`, inline: true },
-                                        { name: 'Status', value: tournament.status, inline: true }
-                                    );
-
-                                if (tournament.status === 'ready') {
-                                    joinEmbed.addFields({
-                                        name: '🎮 Tournament Starting!',
-                                        value: 'All slots filled! The tournament will begin shortly.',
-                                        inline: false
-                                    });
-
-                                    // Disable join button when tournament is ready
-                                    joinButton.setDisabled(true);
-                                    const newRow1 = new ActionRowBuilder().addComponents(joinButton, viewButton);
-                                    await i.update({ embeds: [joinEmbed], components: [newRow1, row2] });
-                                } else {
-                                    await i.update({ embeds: [joinEmbed] });
-                                }
-                            } else {
-                                await i.reply({ content: '❌ Unable to join tournament. It might be full or you\'re already participating.', ephemeral: true });
-                            }
-                        } else if (action === 'view') {
-                            const detailsEmbed = new EmbedBuilder()
-                                .setColor('#4169E1')
-                                .setTitle(`📋 Tournament Details: ${tournament.id}`)
-                                .setDescription(`Type: ${tournament.type}\nRules: ${tournament.rules || 'Standard'}`)
-                                .addFields(
-                                    { name: 'Creator', value: tournament.creator.tag, inline: true },
-                                    { name: 'Created', value: new Date(tournament.createdAt).toLocaleString(), inline: true },
-                                    { name: 'Participants', value: tournament.participants.map(p => p.tag).join('\n') || 'None yet', inline: false }
-                                );
-
-                            await i.reply({ embeds: [detailsEmbed], ephemeral: true });
-                        } else if (action === 'share') {
-                            const shareEmbed = new EmbedBuilder()
-                                .setColor('#FFD700')
-                                .setTitle('📢 Tournament Invitation')
-                                .setDescription(`Join Tournament ${tournament.id}!`)
-                                .addFields(
-                                    { name: 'Type', value: tournament.type, inline: true },
-                                    { name: 'Available Slots', value: `${tournament.slots - tournament.participants.length}`, inline: true },
-                                    { name: 'How to Join', value: `/tournament join ${tournament.id}`, inline: false }
-                                );
-
-                            await i.reply({ embeds: [shareEmbed] });
-                        }
-                    } catch (error) {
-                        console.error('Error in tournament button handler:', error);
-                        await i.followUp({ content: '❌ An error occurred.', ephemeral: true });
-                    }
-                });
-
-                collector.on('end', () => {
-                    // Disable all buttons when collector ends
-                    const disabledRow1 = new ActionRowBuilder().addComponents(
-                        row1.components.map(button => button.setDisabled(true))
-                    );
-                    const disabledRow2 = new ActionRowBuilder().addComponents(
-                        row2.components.map(button => button.setDisabled(true))
-                    );
-                    interaction.editReply({ components: [disabledRow1, disabledRow2] }).catch(() => {});
-                });
+                await interaction.editReply({ embeds: [embed], components: [row] });
 
             } else if (subcommand === 'join') {
                 const id = interaction.options.getString('id');
@@ -284,12 +196,31 @@ module.exports = {
                     return;
                 }
 
-                // This part of the join logic is now handled by the button collector
-                // If a user uses the slash command to join directly, we inform them to use the button.
-                await interaction.editReply({
-                    content: 'Please use the "Join Tournament" button on the tournament announcement to join.',
-                    ephemeral: true
-                });
+                if (tournament.addParticipant(interaction.user)) {
+                    const embed = new EmbedBuilder()
+                        .setColor('#32CD32')
+                        .setTitle(`✅ Joined Tournament ${tournament.id}`)
+                        .setDescription(`${interaction.user.tag} has joined the tournament!`)
+                        .addFields(
+                            { name: 'Participants', value: `${tournament.participants.length}/${tournament.slots}`, inline: true },
+                            { name: 'Status', value: tournament.status, inline: true }
+                        );
+
+                    if (tournament.status === 'ready') {
+                        embed.addFields({
+                            name: '🎮 Tournament Starting!',
+                            value: 'All slots filled! The tournament will begin shortly.',
+                            inline: false
+                        });
+                    }
+
+                    await interaction.editReply({ embeds: [embed] });
+                } else {
+                    await interaction.editReply({ 
+                        content: '❌ Unable to join tournament. It might be full or you\'re already participating.',
+                        ephemeral: true 
+                    });
+                }
 
             } else if (subcommand === 'status') {
                 const id = interaction.options.getString('id');

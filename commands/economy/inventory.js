@@ -1,7 +1,7 @@
-
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const config = require('../../config.js');
-const db = require('../../database.js');
+const { db } = require('../../database.js');
+const { ItemManager } = require('../../game/Items.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,127 +17,99 @@ module.exports = {
                     { name: '💍 Accessories', value: 'accessories' },
                     { name: '🔧 Tools', value: 'tools' },
                     { name: '🧪 Consumables', value: 'consumables' },
-                    { name: '🔨 Materials', value: 'materials' },
-                    { name: '💎 Treasures', value: 'treasures' }
+                    { name: '🔨 Materials', value: 'materials' }
                 ))
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('View another user\'s inventory (if public)')
-                .setRequired(false))
-        .addStringOption(option =>
-            option.setName('sort')
-                .setDescription('Sort items by specific criteria')
-                .setRequired(false)
-                .addChoices(
-                    { name: '💰 Value (High to Low)', value: 'value_desc' },
-                    { name: '💰 Value (Low to High)', value: 'value_asc' },
-                    { name: '⭐ Rarity', value: 'rarity' },
-                    { name: '📅 Date Acquired', value: 'date' },
-                    { name: '🔤 Name', value: 'name' }
-                )),
+                .setRequired(false)),
 
     async execute(interaction) {
         const category = interaction.options?.getString('category');
         const targetUser = interaction.options?.getUser('user') || interaction.user;
-        const sortBy = interaction.options?.getString('sort') || 'rarity';
         const isOwnInventory = targetUser.id === interaction.user.id;
 
         try {
             const userData = await db.getPlayer(targetUser.id);
             if (!userData) {
-                const embed = new EmbedBuilder()
-                    .setColor('#FF0000')
-                    .setTitle('❌ Profile Not Found')
-                    .setDescription(`${isOwnInventory ? 'You don\'t' : 'This user doesn\'t'} have a treasure hunter profile yet!\n\n${isOwnInventory ? 'Start your adventure with `/daily` or `/work`!' : 'They need to start their adventure first!'}`)
-                    .setFooter({ text: isOwnInventory ? 'Use /help to learn about available commands' : '' });
-
-                return await interaction.reply({ embeds: [embed], ephemeral: true });
+                return await interaction.reply({
+                    content: `❌ ${isOwnInventory ? 'You don\'t' : 'This user doesn\'t'} have a treasure hunter profile yet!`,
+                    ephemeral: true
+                });
             }
 
-            const inventory = userData.inventory || { items: [], coins: 0 };
-            const items = this.processItems(inventory.items || []);
-            
+            const inventory = userData.inventory || { items: [] };
+            const itemManager = new ItemManager();
+
+            // Get all items with their details
+            const items = inventory.items.map(item => {
+                const details = itemManager.getItem(item.id);
+                return { ...item, ...details };
+            }).filter(item => item.name); // Filter out items that don't exist anymore
+
             // Filter by category if specified
-            const filteredItems = category ? 
-                items.filter(item => item.type === category) : 
+            const filteredItems = category ?
+                items.filter(item => item.type === category) :
                 items;
 
-            // Sort items
-            const sortedItems = this.sortItems(filteredItems, sortBy);
-
             const embed = new EmbedBuilder()
-                .setColor('#8B4513')
+                .setColor(config.embedColors?.inventory || '#8B4513')
                 .setTitle(`🎒 ${isOwnInventory ? 'Your' : `${targetUser.displayName}'s`} Treasure Inventory`)
-                .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-                .setDescription(`**${isOwnInventory ? 'Manage your precious collection' : 'Viewing their treasure collection'}**${category ? `\n🔍 Filtered by: **${category}**` : ''}`);
+                .setThumbnail(targetUser.displayAvatarURL())
+                .addFields([
+                    {
+                        name: '📊 Inventory Stats',
+                        value: `**Total Items:** ${items.length}\n**Unique Items:** ${new Set(items.map(i => i.id)).size}\n**Categories:** ${new Set(items.map(i => i.type)).size}`,
+                        inline: true
+                    },
+                    {
+                        name: '💰 Wallet',
+                        value: `${userData.coins?.toLocaleString() || 0} coins`,
+                        inline: true
+                    },
+                    {
+                        name: '⭐ Total Value',
+                        value: `${items.reduce((sum, item) => sum + (item.price || 0), 0).toLocaleString()} coins`,
+                        inline: true
+                    }
+                ]);
 
-            // Inventory statistics
-            const stats = this.calculateStats(items, userData);
-            embed.addFields([
-                {
-                    name: '📊 Inventory Overview',
-                    value: `**Total Items:** ${items.length}\n**Unique Types:** ${new Set(items.map(i => i.type)).size}\n**Categories:** ${Object.keys(this.groupByCategory(items)).length}`,
-                    inline: true
-                },
-                {
-                    name: '💰 Financial Status',
-                    value: `**Wallet:** ${(userData.coins || 0).toLocaleString()} coins\n**Item Value:** ${stats.totalValue.toLocaleString()} coins\n**Net Worth:** ${(stats.totalValue + (userData.coins || 0)).toLocaleString()} coins`,
-                    inline: true
-                },
-                {
-                    name: '⭐ Quality Metrics',
-                    value: `**Legendary:** ${stats.rarity.legendary || 0}\n**Epic:** ${stats.rarity.epic || 0}\n**Rare:** ${stats.rarity.rare || 0}`,
-                    inline: true
-                }
-            ]);
-
-            if (sortedItems.length === 0) {
-                embed.addFields([{
-                    name: '📦 Empty Inventory',
-                    value: category ? 
-                        `No items found in the **${category}** category.\nTry browsing other categories or start collecting!` : 
-                        'This inventory is empty.\n\n🚀 **Get started:**\n• Use `/shop` to buy items\n• Try `/hunt` to find treasures\n• Use `/work` to earn coins',
-                    inline: false
-                }]);
+            if (filteredItems.length === 0) {
+                embed.setDescription(category ?
+                    `No items found in the **${category}** category.` :
+                    'This inventory is empty. Start your treasure hunting adventure!'
+                );
             } else {
-                // Group items by category for better display
-                const groupedItems = this.groupByCategory(sortedItems);
-                const categories = Object.keys(groupedItems).slice(0, 6);
+                // Group items by type for better display
+                const groupedItems = {};
+                filteredItems.forEach(item => {
+                    if (!groupedItems[item.type]) groupedItems[item.type] = [];
+                    groupedItems[item.type].push(item);
+                });
 
-                categories.forEach(type => {
-                    const typeItems = groupedItems[type];
+                // Display items by category
+                Object.entries(groupedItems).slice(0, 6).forEach(([type, typeItems]) => {
                     const typeIcon = this.getTypeIcon(type);
                     const itemCounts = {};
-                    
+
                     typeItems.forEach(item => {
-                        const key = `${item.name} ${item.rarity}`;
-                        itemCounts[key] = (itemCounts[key] || 0) + 1;
+                        itemCounts[item.name] = (itemCounts[item.name] || 0) + 1;
                     });
 
                     const itemList = Object.entries(itemCounts)
-                        .slice(0, 4)
-                        .map(([name, count]) => {
-                            const [itemName, rarity] = name.split(' ');
-                            const rarityIcon = this.getRarityIcon(rarity);
-                            return `${rarityIcon} ${itemName} ${count > 1 ? `(×${count})` : ''}`;
-                        })
+                        .slice(0, 5)
+                        .map(([name, count]) => `• ${name} ${count > 1 ? `(×${count})` : ''}`)
                         .join('\n');
-
-                    const totalValue = typeItems.reduce((sum, item) => sum + (item.value || 0), 0);
 
                     embed.addFields([{
                         name: `${typeIcon} ${type.charAt(0).toUpperCase() + type.slice(1)} (${typeItems.length})`,
-                        value: `${itemList}${Object.keys(itemCounts).length > 4 ? `\n*+${Object.keys(itemCounts).length - 4} more*` : ''}\n💰 ${totalValue.toLocaleString()} coins`,
+                        value: itemList + (Object.keys(itemCounts).length > 5 ? `\n*+${Object.keys(itemCounts).length - 5} more*` : ''),
                         inline: true
                     }]);
                 });
 
-                if (categories.length > 6) {
-                    embed.setFooter({ 
-                        text: `Showing 6 of ${Object.keys(groupedItems).length} categories • Use filters to see more • Sorted by ${sortBy}` 
-                    });
-                } else {
-                    embed.setFooter({ text: `Sorted by ${sortBy} • ${sortedItems.length} total items` });
+                if (Object.keys(groupedItems).length > 6) {
+                    embed.setFooter({ text: `Showing 6 of ${Object.keys(groupedItems).length} categories. Use filters to see more.` });
                 }
             }
 
@@ -146,70 +118,54 @@ module.exports = {
 
             if (items.length > 0) {
                 // Category filter dropdown
-                const groupedItems = this.groupByCategory(items);
                 const categorySelect = new StringSelectMenuBuilder()
                     .setCustomId(`inventory_filter_${targetUser.id}`)
                     .setPlaceholder('🔍 Filter by category...')
                     .addOptions([
-                        { label: 'All Items', value: 'all', emoji: '📦', description: `View all ${items.length} items` },
-                        ...Object.keys(groupedItems).map(type => ({
+                        { label: 'All Items', value: 'all', emoji: '📦' },
+                        ...Object.keys(groupedItems || {}).map(type => ({
                             label: `${this.getTypeIcon(type)} ${type.charAt(0).toUpperCase() + type.slice(1)}`,
                             value: type,
-                            description: `${groupedItems[type].length} items`,
-                            emoji: this.getTypeIcon(type)
+                            description: `View ${type} items`
                         }))
                     ]);
 
                 components.push(new ActionRowBuilder().addComponents(categorySelect));
-
-                // Sort options dropdown
-                const sortSelect = new StringSelectMenuBuilder()
-                    .setCustomId(`inventory_sort_${targetUser.id}`)
-                    .setPlaceholder('🔄 Change sorting...')
-                    .addOptions([
-                        { label: 'By Rarity', value: 'rarity', emoji: '⭐', description: 'Legendary to common' },
-                        { label: 'By Value (High)', value: 'value_desc', emoji: '💰', description: 'Most valuable first' },
-                        { label: 'By Value (Low)', value: 'value_asc', emoji: '💸', description: 'Least valuable first' },
-                        { label: 'By Name', value: 'name', emoji: '🔤', description: 'Alphabetical order' },
-                        { label: 'By Date', value: 'date', emoji: '📅', description: 'Recently acquired first' }
-                    ]);
-
-                components.push(new ActionRowBuilder().addComponents(sortSelect));
             }
 
             // Action buttons
-            const actionButtons = new ActionRowBuilder();
-            
-            if (isOwnInventory && items.length > 0) {
-                actionButtons.addComponents(
+            const buttons = new ActionRowBuilder();
+
+            if (isOwnInventory) {
+                buttons.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('inventory_sort')
+                        .setLabel('🔄 Sort Items')
+                        .setStyle(ButtonStyle.Primary),
                     new ButtonBuilder()
                         .setCustomId('inventory_equip')
                         .setLabel('⚔️ Quick Equip')
-                        .setStyle(ButtonStyle.Success),
+                        .setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder()
                         .setCustomId('inventory_sell')
                         .setLabel('💰 Quick Sell')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId('inventory_organize')
-                        .setLabel('📚 Organize')
-                        .setStyle(ButtonStyle.Primary)
+                        .setStyle(ButtonStyle.Secondary)
                 );
             }
 
-            actionButtons.addComponents(
+            buttons.addComponents(
                 new ButtonBuilder()
                     .setCustomId('inventory_refresh')
                     .setLabel('🔄 Refresh')
                     .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
-                    .setCustomId('inventory_details')
-                    .setLabel('📊 Detailed View')
+                    .setCustomId('inventory_stats')
+                    .setLabel('📊 Detailed Stats')
                     .setStyle(ButtonStyle.Secondary)
             );
 
-            if (actionButtons.components.length > 0) {
-                components.push(actionButtons);
+            if (buttons.components.length > 0) {
+                components.push(buttons);
             }
 
             await interaction.reply({
@@ -219,82 +175,164 @@ module.exports = {
 
         } catch (error) {
             console.error('Inventory command error:', error);
-            const errorEmbed = new EmbedBuilder()
-                .setColor('#FF0000')
-                .setTitle('❌ Inventory Error')
-                .setDescription('An error occurred while loading the inventory. Please try again.')
-                .addFields([
-                    { name: '🔧 Troubleshooting', value: '• Check if your profile exists\n• Try again in a few moments\n• Contact support if issue persists', inline: false }
-                ]);
+            await interaction.reply({
+                content: '❌ An error occurred while loading the inventory. Please try again.',
+                ephemeral: true
+            });
+        }
+    },
 
-            await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    // Button handlers
+    buttonHandlers: {
+        async sort(interaction) {
+            await interaction.reply({
+                content: '🔄 Sorting options:\n• **By Type** - Group similar items\n• **By Value** - Highest to lowest\n• **By Rarity** - Legendary to common\n• **By Date** - Newest first',
+                ephemeral: true
+            });
+        },
+
+        async equip(interaction) {
+            const userData = await db.getPlayer(interaction.user.id);
+            const itemManager = new ItemManager();
+
+            const equipableItems = userData.inventory?.items
+                ?.map(item => itemManager.getItem(item.id))
+                ?.filter(item => item && (item.type === 'weapons' || item.type === 'armor'))
+                ?.slice(0, 10) || [];
+
+            if (equipableItems.length === 0) {
+                return await interaction.reply({
+                    content: '❌ No equipable items found in your inventory!',
+                    ephemeral: true
+                });
+            }
+
+            const equipSelect = new StringSelectMenuBuilder()
+                .setCustomId('inventory_equip_select')
+                .setPlaceholder('⚔️ Choose an item to equip...')
+                .addOptions(equipableItems.map(item => ({
+                    label: item.name,
+                    value: item.id,
+                    description: `${item.type} - ${item.rarity}`,
+                    emoji: item.getRarityIcon()
+                })));
+
+            await interaction.reply({
+                content: '⚔️ **Quick Equip Menu**\nSelect an item to equip:',
+                components: [new ActionRowBuilder().addComponents(equipSelect)],
+                ephemeral: true
+            });
+        },
+
+        async sell(interaction) {
+            await interaction.reply({
+                content: '💰 **Quick Sell** feature coming soon!\nFor now, use `/shop` to browse and purchase items.',
+                ephemeral: true
+            });
+        },
+
+        async refresh(interaction) {
+            await module.exports.execute(interaction);
+        },
+
+        async stats(interaction) {
+            const userData = await db.getPlayer(interaction.user.id);
+            const itemManager = new ItemManager();
+
+            const items = userData.inventory?.items?.map(item => {
+                const details = itemManager.getItem(item.id);
+                return { ...item, ...details };
+            }).filter(item => item.name) || [];
+
+            const stats = {
+                totalValue: items.reduce((sum, item) => sum + (item.price || 0), 0),
+                rarity: {},
+                types: {},
+                equipped: userData.equipment ? Object.keys(userData.equipment).length : 0
+            };
+
+            items.forEach(item => {
+                stats.rarity[item.rarity] = (stats.rarity[item.rarity] || 0) + 1;
+                stats.types[item.type] = (stats.types[item.type] || 0) + 1;
+            });
+
+            const embed = new EmbedBuilder()
+                .setColor(config.embedColors?.info || '#0099FF')
+                .setTitle('📊 Detailed Inventory Statistics')
+                .addFields([
+                    {
+                        name: '💰 Value Breakdown',
+                        value: `**Total Value:** ${stats.totalValue.toLocaleString()} coins\n**Average Value:** ${Math.floor(stats.totalValue / Math.max(items.length, 1)).toLocaleString()} coins\n**Most Valuable:** ${items.sort((a, b) => (b.price || 0) - (a.price || 0))[0]?.name || 'None'}`,
+                        inline: false
+                    },
+                    {
+                        name: '⭐ Rarity Distribution',
+                        value: Object.entries(stats.rarity)
+                            .map(([rarity, count]) => `**${rarity}:** ${count}`)
+                            .join('\n') || 'No items',
+                        inline: true
+                    },
+                    {
+                        name: '📦 Type Distribution',
+                        value: Object.entries(stats.types)
+                            .map(([type, count]) => `**${type}:** ${count}`)
+                            .join('\n') || 'No items',
+                        inline: true
+                    },
+                    {
+                        name: '⚔️ Equipment Status',
+                        value: `**Equipped Items:** ${stats.equipped}\n**Available Slots:** ${5 - stats.equipped}\n**Equipment Bonus:** +${stats.equipped * 10}% efficiency`,
+                        inline: true
+                    }
+                ])
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+    },
+
+    // Select menu handlers
+    selectMenuHandlers: {
+        async filter(interaction) {
+            const category = interaction.values[0];
+            const targetUserId = interaction.customId.split('_')[2];
+
+            if (category === 'all') {
+                await module.exports.execute(interaction);
+            } else {
+                const newInteraction = {
+                    ...interaction,
+                    options: {
+                        getString: (name) => name === 'category' ? category : null,
+                        getUser: (name) => name === 'user' ? { id: targetUserId } : null
+                    }
+                };
+                await module.exports.execute(newInteraction);
+            }
+        },
+
+        async equip_select(interaction) {
+            const itemId = interaction.values[0];
+            const userData = await db.getPlayer(interaction.user.id);
+            const itemManager = new ItemManager();
+            const item = itemManager.getItem(itemId);
+
+            if (!item) {
+                return await interaction.reply({
+                    content: '❌ Item not found!',
+                    ephemeral: true
+                });
+            }
+
+            // Equip logic would go here
+            await interaction.reply({
+                content: `⚔️ Successfully equipped **${item.name}**!\n*Equipment system integration coming soon.*`,
+                ephemeral: true
+            });
         }
     },
 
     // Helper methods
-    processItems(items) {
-        const itemDatabase = {
-            'iron_sword': { name: 'Iron Sword', type: 'weapons', rarity: 'common', value: 150 },
-            'steel_armor': { name: 'Steel Armor', type: 'armor', rarity: 'uncommon', value: 300 },
-            'health_potion': { name: 'Health Potion', type: 'consumables', rarity: 'common', value: 50 },
-            'magic_ring': { name: 'Magic Ring', type: 'accessories', rarity: 'rare', value: 500 },
-            'dragon_scale': { name: 'Dragon Scale', type: 'materials', rarity: 'legendary', value: 1000 }
-        };
-
-        return items.map(item => {
-            const details = itemDatabase[item.id] || {
-                name: item.id || 'Unknown Item',
-                type: item.type || 'materials',
-                rarity: item.rarity || 'common',
-                value: item.value || 10
-            };
-            return { ...item, ...details };
-        }).filter(item => item.name !== 'Unknown Item');
-    },
-
-    sortItems(items, sortBy) {
-        switch (sortBy) {
-            case 'value_desc':
-                return items.sort((a, b) => (b.value || 0) - (a.value || 0));
-            case 'value_asc':
-                return items.sort((a, b) => (a.value || 0) - (b.value || 0));
-            case 'rarity':
-                const rarityOrder = { legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1 };
-                return items.sort((a, b) => (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0));
-            case 'name':
-                return items.sort((a, b) => a.name.localeCompare(b.name));
-            case 'date':
-                return items.sort((a, b) => (b.obtained || 0) - (a.obtained || 0));
-            default:
-                return items;
-        }
-    },
-
-    groupByCategory(items) {
-        return items.reduce((groups, item) => {
-            const category = item.type || 'materials';
-            if (!groups[category]) groups[category] = [];
-            groups[category].push(item);
-            return groups;
-        }, {});
-    },
-
-    calculateStats(items, userData) {
-        const stats = {
-            totalValue: items.reduce((sum, item) => sum + (item.value || 0), 0),
-            rarity: {},
-            types: {},
-            equipped: Object.keys(userData.equipment || {}).length
-        };
-
-        items.forEach(item => {
-            stats.rarity[item.rarity] = (stats.rarity[item.rarity] || 0) + 1;
-            stats.types[item.type] = (stats.types[item.type] || 0) + 1;
-        });
-
-        return stats;
-    },
-
     getTypeIcon(type) {
         const icons = {
             weapons: '⚔️',
@@ -303,20 +341,8 @@ module.exports = {
             tools: '🔧',
             consumables: '🧪',
             materials: '🔨',
-            treasures: '💎',
             special: '⭐'
         };
         return icons[type] || '📦';
-    },
-
-    getRarityIcon(rarity) {
-        const icons = {
-            legendary: '🌟',
-            epic: '💜',
-            rare: '💙',
-            uncommon: '💚',
-            common: '⚪'
-        };
-        return icons[rarity] || '⚪';
     }
 };

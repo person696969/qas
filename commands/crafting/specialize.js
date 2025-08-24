@@ -1,106 +1,80 @@
-
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database.js');
 
-const SPECIALIZATIONS = {
+// Crafting specializations and their bonuses
+const specializations = {
     weaponsmith: {
-        name: '⚔️ Weaponsmith',
-        description: 'Master of crafting deadly weapons and tools of war',
+        name: 'Weaponsmith',
+        emoji: '⚔️',
+        description: 'Master of weapon crafting',
         bonuses: {
-            weapon_damage: 25,
-            weapon_durability: 30,
-            critical_craft_chance: 15
-        },
-        skills: ['Blade Forging', 'Handle Crafting', 'Enchantment Infusion', 'Masterwork Creation'],
-        requirements: { crafting_level: 10, items_crafted: 50 },
-        cost: 2500,
-        emoji: '⚔️'
+            weapons: 0.25, // 25% better weapon crafting
+            durability: 0.15 // 15% more durability
+        }
     },
-    armorsmith: {
-        name: '🛡️ Armorsmith',
-        description: 'Expert in creating protective gear and defensive equipment',
+    armorer: {
+        name: 'Armorer',
+        emoji: '🛡️',
+        description: 'Expert in armor crafting',
         bonuses: {
-            armor_defense: 25,
-            armor_durability: 35,
-            set_bonus_chance: 20
-        },
-        skills: ['Plate Smithing', 'Chain Weaving', 'Padding Craft', 'Reinforcement'],
-        requirements: { crafting_level: 10, items_crafted: 50 },
-        cost: 2500,
-        emoji: '🛡️'
+            armor: 0.25, // 25% better armor crafting
+            protection: 0.15 // 15% more protection
+        }
     },
-    alchemist: {
-        name: '🧪 Master Alchemist',
-        description: 'Creator of powerful potions and magical concoctions',
+    jeweler: {
+        name: 'Jeweler',
+        emoji: '💎',
+        description: 'Specialist in jewelry and accessories',
         bonuses: {
-            potion_potency: 40,
-            brew_success_rate: 25,
-            rare_ingredient_chance: 15
-        },
-        skills: ['Essence Extraction', 'Compound Mixing', 'Catalyst Creation', 'Elixir Mastery'],
-        requirements: { alchemy_level: 8, potions_brewed: 30 },
-        cost: 2000,
-        emoji: '🧪'
+            accessories: 0.25, // 25% better accessory crafting
+            value: 0.15 // 15% more valuable items
+        }
     },
-    enchanter: {
-        name: '✨ Enchanter',
-        description: 'Weaver of magical energies into mundane objects',
+    artificer: {
+        name: 'Artificer',
+        emoji: '✨',
+        description: 'Master of enchanted items',
         bonuses: {
-            enchantment_power: 30,
-            multi_enchant_chance: 10,
-            mana_efficiency: 20
-        },
-        skills: ['Rune Inscription', 'Magical Channeling', 'Aura Manipulation', 'Spell Binding'],
-        requirements: { magic_level: 12, enchantments_made: 25 },
-        cost: 3000,
-        emoji: '✨'
-    },
-    jewelcrafter: {
-        name: '💎 Master Jewelcrafter',
-        description: 'Artisan of precious gems and mystical accessories',
-        bonuses: {
-            gem_quality: 35,
-            socket_success_rate: 20,
-            precious_find_rate: 15
-        },
-        skills: ['Gem Cutting', 'Setting Mastery', 'Precious Identification', 'Mystical Infusion'],
-        requirements: { crafting_level: 8, gems_cut: 40 },
-        cost: 2200,
-        emoji: '💎'
+            enchanting: 0.25, // 25% better enchanting
+            magical: 0.15 // 15% stronger magical effects
+        }
     }
+};
+
+const specializationLevels = {
+    1: { title: 'Apprentice', bonus: 1.0 },
+    2: { title: 'Journeyman', bonus: 1.1 },
+    3: { title: 'Expert', bonus: 1.25 },
+    4: { title: 'Master', bonus: 1.5 },
+    5: { title: 'Grandmaster', bonus: 2.0 }
 };
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('specialize')
-        .setDescription('🎯 Choose a crafting specialization to unlock advanced abilities')
+        .setDescription('🎯 Choose or view your crafting specialization')
         .addSubcommand(subcommand =>
             subcommand
                 .setName('view')
-                .setDescription('View available specializations and your current progress'))
+                .setDescription('View your current specialization and progress'))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('choose')
-                .setDescription('Select a specialization path')
+                .setDescription('Choose a new specialization')
                 .addStringOption(option =>
-                    option.setName('specialization')
-                        .setDescription('Choose your specialization')
+                    option.setName('type')
+                        .setDescription('Specialization type')
                         .setRequired(true)
                         .addChoices(
                             { name: '⚔️ Weaponsmith', value: 'weaponsmith' },
-                            { name: '🛡️ Armorsmith', value: 'armorsmith' },
-                            { name: '🧪 Master Alchemist', value: 'alchemist' },
-                            { name: '✨ Enchanter', value: 'enchanter' },
-                            { name: '💎 Master Jewelcrafter', value: 'jewelcrafter' }
+                            { name: '🛡️ Armorer', value: 'armorer' },
+                            { name: '💎 Jeweler', value: 'jeweler' },
+                            { name: '✨ Artificer', value: 'artificer' }
                         )))
         .addSubcommand(subcommand =>
             subcommand
-                .setName('progress')
-                .setDescription('View your specialization progress and skills'))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('reset')
-                .setDescription('Reset your specialization (costs 5000 coins)')),
+                .setName('advance')
+                .setDescription('Advance your specialization rank when ready')),
 
     async execute(interaction) {
         await interaction.deferReply();
@@ -108,210 +82,174 @@ module.exports = {
         try {
             const subcommand = interaction.options.getSubcommand();
             const userId = interaction.user.id;
-            
+
+            // Get player data
             const player = await db.getPlayer(userId) || {
-                coins: 100,
+                level: 1,
+                craftingLevel: 1,
                 specialization: null,
-                specialization_progress: {},
-                crafting_stats: { items_crafted: 0, level: 1 }
+                specializationLevel: 1,
+                specializationExp: 0
             };
 
             if (subcommand === 'view') {
-                const embed = new EmbedBuilder()
-                    .setColor('#8A2BE2')
-                    .setTitle('🎯 Crafting Specializations')
-                    .setDescription('**Master Your Craft - Choose Your Path**\n\nSpecialize in a crafting discipline to unlock powerful bonuses and unique abilities!')
-                    .addFields(
-                        { name: '📊 Your Status', value: player.specialization ? `Current: ${SPECIALIZATIONS[player.specialization]?.name || 'Unknown'}` : 'No Specialization', inline: true },
-                        { name: '💰 Your Coins', value: `${player.coins.toLocaleString()}`, inline: true },
-                        { name: '🔨 Crafting Level', value: `${player.crafting_stats?.level || 1}`, inline: true }
-                    );
+                if (!player.specialization) {
+                    const embed = new EmbedBuilder()
+                        .setColor('#808080')
+                        .setTitle('🎯 Crafting Specialization')
+                        .setDescription('You haven\'t chosen a specialization yet!')
+                        .addFields({
+                            name: '📋 Available Specializations',
+                            value: Object.entries(specializations)
+                                .map(([id, spec]) => `${spec.emoji} **${spec.name}**: ${spec.description}`)
+                                .join('\n')
+                        });
 
-                Object.entries(SPECIALIZATIONS).forEach(([key, spec]) => {
-                    const meetsRequirements = checkRequirements(player, spec.requirements);
-                    const statusIcon = meetsRequirements ? '✅' : '❌';
-                    
-                    embed.addFields({
-                        name: `${spec.emoji} ${spec.name} ${statusIcon}`,
-                        value: `${spec.description}\n**Cost:** ${spec.cost} coins\n**Requirements:** Level ${spec.requirements.crafting_level || 1}`,
-                        inline: true
+                    const chooseButton = new ButtonBuilder()
+                        .setCustomId('choose_specialization')
+                        .setLabel('Choose Specialization')
+                        .setStyle(ButtonStyle.Primary);
+
+                    const row = new ActionRowBuilder()
+                        .addComponents(chooseButton);
+
+                    await interaction.editReply({
+                        embeds: [embed],
+                        components: [row]
                     });
-                });
+                    return;
+                }
 
-                const selectMenu = new StringSelectMenuBuilder()
-                    .setCustomId('specialize_select')
-                    .setPlaceholder('Choose a specialization to learn more...')
-                    .addOptions(
-                        Object.entries(SPECIALIZATIONS).map(([key, spec]) => ({
-                            label: spec.name,
-                            description: spec.description.substring(0, 100),
-                            value: key,
-                            emoji: spec.emoji
-                        }))
+                const spec = specializations[player.specialization];
+                const level = specializationLevels[player.specializationLevel];
+                const nextLevel = specializationLevels[player.specializationLevel + 1];
+
+                const embed = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle(`${spec.emoji} ${spec.name} - ${level.title}`)
+                    .setDescription(spec.description)
+                    .addFields(
+                        { name: 'Rank', value: `${level.title} (Level ${player.specializationLevel})`, inline: true },
+                        { name: 'Experience', value: `${player.specializationExp}/1000`, inline: true },
+                        { name: 'Current Bonus', value: `${(level.bonus * 100 - 100).toFixed(0)}% increased effectiveness`, inline: true }
                     );
 
-                const row = new ActionRowBuilder().addComponents(selectMenu);
+                if (nextLevel) {
+                    embed.addFields({
+                        name: 'Next Rank',
+                        value: `${nextLevel.title} - ${(nextLevel.bonus * 100 - 100).toFixed(0)}% effectiveness`,
+                        inline: false
+                    });
+                } else {
+                    embed.addFields({
+                        name: '🌟 Maximum Rank',
+                        value: 'You have reached the pinnacle of your specialization!',
+                        inline: false
+                    });
+                }
 
-                await interaction.editReply({
-                    embeds: [embed],
-                    components: [row]
+                const progressBar = createProgressBar(player.specializationExp, 1000);
+                embed.addFields({
+                    name: 'Progress',
+                    value: progressBar,
+                    inline: false
                 });
+
+                await interaction.editReply({ embeds: [embed] });
 
             } else if (subcommand === 'choose') {
-                const specializationKey = interaction.options.getString('specialization');
-                const specialization = SPECIALIZATIONS[specializationKey];
-
-                if (!specialization) {
-                    await interaction.editReply({ content: '❌ Invalid specialization!', ephemeral: true });
-                    return;
-                }
-
                 if (player.specialization) {
-                    await interaction.editReply({ content: '❌ You already have a specialization! Use `/specialize reset` first.', ephemeral: true });
+                    await interaction.editReply({
+                        content: '❌ You already have a specialization! You cannot change it.',
+                        ephemeral: true
+                    });
                     return;
                 }
 
-                if (!checkRequirements(player, specialization.requirements)) {
-                    const reqText = Object.entries(specialization.requirements)
-                        .map(([req, val]) => `${req.replace('_', ' ')}: ${val}`)
-                        .join(', ');
-                    await interaction.editReply({ content: `❌ Requirements not met: ${reqText}`, ephemeral: true });
-                    return;
-                }
+                const type = interaction.options.getString('type');
+                const spec = specializations[type];
 
-                if (player.coins < specialization.cost) {
-                    await interaction.editReply({ content: `❌ You need ${specialization.cost} coins to specialize!`, ephemeral: true });
-                    return;
-                }
-
-                // Apply specialization
-                player.coins -= specialization.cost;
-                player.specialization = specializationKey;
-                player.specialization_progress = {
-                    level: 1,
-                    experience: 0,
-                    skills_unlocked: [],
-                    mastery_points: 0
-                };
+                player.specialization = type;
+                player.specializationLevel = 1;
+                player.specializationExp = 0;
 
                 await db.updatePlayer(userId, player);
 
                 const embed = new EmbedBuilder()
-                    .setColor('#FFD700')
-                    .setTitle('🎉 Specialization Acquired!')
-                    .setDescription(`Congratulations! You are now a **${specialization.name}**!`)
+                    .setColor('#32CD32')
+                    .setTitle(`${spec.emoji} Specialization Chosen!`)
+                    .setDescription(`You are now a ${specializationLevels[1].title} ${spec.name}!`)
                     .addFields(
-                        { name: '🎯 Your Path', value: specialization.description, inline: false },
-                        { name: '💪 Bonuses Gained', value: Object.entries(specialization.bonuses).map(([bonus, value]) => `${bonus.replace('_', ' ')}: +${value}%`).join('\n'), inline: true },
-                        { name: '📚 Available Skills', value: specialization.skills.slice(0, 2).join('\n') + '\n*More skills unlock as you progress*', inline: true },
-                        { name: '💰 Remaining Coins', value: `${player.coins.toLocaleString()}`, inline: true }
-                    )
-                    .setFooter({ text: 'Use /specialize progress to track your advancement!' });
+                        { name: 'Bonuses', value: Object.entries(spec.bonuses)
+                            .map(([stat, bonus]) => `${bonus * 100}% increased ${stat}`)
+                            .join('\n'), inline: false },
+                        { name: 'Next Steps', value: 'Craft items to gain experience and advance your specialization!', inline: false }
+                    );
 
                 await interaction.editReply({ embeds: [embed] });
 
-            } else if (subcommand === 'progress') {
+            } else if (subcommand === 'advance') {
                 if (!player.specialization) {
-                    await interaction.editReply({ content: '❌ You don\'t have a specialization yet!', ephemeral: true });
-                    return;
-                }
-
-                const specialization = SPECIALIZATIONS[player.specialization];
-                const progress = player.specialization_progress || { level: 1, experience: 0, skills_unlocked: [], mastery_points: 0 };
-
-                const embed = new EmbedBuilder()
-                    .setColor('#9932CC')
-                    .setTitle(`${specialization.emoji} ${specialization.name} Progress`)
-                    .setDescription(`Your journey as a **${specialization.name}** continues!`)
-                    .addFields(
-                        { name: '📊 Level & Experience', value: `Level: ${progress.level}\nExp: ${progress.experience}/1000\nMastery Points: ${progress.mastery_points}`, inline: true },
-                        { name: '💪 Active Bonuses', value: Object.entries(specialization.bonuses).map(([bonus, value]) => `${bonus.replace('_', ' ')}: +${value}%`).join('\n'), inline: true },
-                        { name: '🎓 Skills Unlocked', value: progress.skills_unlocked.length > 0 ? progress.skills_unlocked.join('\n') : 'None yet', inline: true }
-                    );
-
-                const availableSkills = specialization.skills.filter(skill => !progress.skills_unlocked.includes(skill));
-                if (availableSkills.length > 0) {
-                    embed.addFields({
-                        name: '🔓 Next Skills Available', value: availableSkills.slice(0, 3).join('\n'), inline: false
+                    await interaction.editReply({
+                        content: '❌ You need to choose a specialization first!',
+                        ephemeral: true
                     });
-                }
-
-                const practiceButton = new ButtonBuilder()
-                    .setCustomId('specialize_practice')
-                    .setLabel('Practice Skills')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('💪');
-
-                const masterButton = new ButtonBuilder()
-                    .setCustomId('specialize_master')
-                    .setLabel('Master Training')
-                    .setStyle(ButtonStyle.Success)
-                    .setEmoji('🌟')
-                    .setDisabled(progress.mastery_points < 10);
-
-                const row = new ActionRowBuilder().addComponents(practiceButton, masterButton);
-
-                await interaction.editReply({
-                    embeds: [embed],
-                    components: [row]
-                });
-
-            } else if (subcommand === 'reset') {
-                if (!player.specialization) {
-                    await interaction.editReply({ content: '❌ You don\'t have a specialization to reset!', ephemeral: true });
                     return;
                 }
 
-                if (player.coins < 5000) {
-                    await interaction.editReply({ content: '❌ You need 5000 coins to reset your specialization!', ephemeral: true });
+                if (player.specializationExp < 1000) {
+                    await interaction.editReply({
+                        content: `❌ You need 1000 experience to advance. Current: ${player.specializationExp}`,
+                        ephemeral: true
+                    });
                     return;
                 }
 
-                const confirmButton = new ButtonBuilder()
-                    .setCustomId('specialize_reset_confirm')
-                    .setLabel('Confirm Reset')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('⚠️');
+                if (player.specializationLevel >= 5) {
+                    await interaction.editReply({
+                        content: '❌ You have already reached the maximum specialization level!',
+                        ephemeral: true
+                    });
+                    return;
+                }
 
-                const cancelButton = new ButtonBuilder()
-                    .setCustomId('specialize_reset_cancel')
-                    .setLabel('Cancel')
-                    .setStyle(ButtonStyle.Secondary);
+                // Advance specialization
+                player.specializationLevel += 1;
+                player.specializationExp = 0;
+                await db.updatePlayer(userId, player);
 
-                const row = new ActionRowBuilder().addComponents(confirmButton, cancelButton);
+                const spec = specializations[player.specialization];
+                const newLevel = specializationLevels[player.specializationLevel];
 
                 const embed = new EmbedBuilder()
-                    .setColor('#FF4500')
-                    .setTitle('⚠️ Reset Specialization')
-                    .setDescription(`Are you sure you want to reset your **${SPECIALIZATIONS[player.specialization].name}** specialization?`)
+                    .setColor('#FFD700')
+                    .setTitle('🌟 Specialization Advanced!')
+                    .setDescription(`Your ${spec.name} expertise has grown!`)
                     .addFields(
-                        { name: '💰 Cost', value: '5000 coins', inline: true },
-                        { name: '⚠️ Warning', value: 'All progress will be lost!', inline: true },
-                        { name: '✅ Benefit', value: 'Can choose a new specialization', inline: true }
+                        { name: 'New Rank', value: newLevel.title, inline: true },
+                        { name: 'Level', value: player.specializationLevel.toString(), inline: true },
+                        { name: 'Bonus', value: `${(newLevel.bonus * 100 - 100).toFixed(0)}% effectiveness`, inline: true }
                     );
 
-                await interaction.editReply({
-                    embeds: [embed],
-                    components: [row]
-                });
+                await interaction.editReply({ embeds: [embed] });
             }
 
         } catch (error) {
             console.error('Error in specialize command:', error);
             await interaction.editReply({
-                content: '❌ An error occurred with the specialization system.',
+                content: '❌ An error occurred with the specialization command.',
                 ephemeral: true
             });
         }
     },
 };
 
-function checkRequirements(player, requirements) {
-    for (const [req, value] of Object.entries(requirements)) {
-        if (req === 'crafting_level' && (player.crafting_stats?.level || 1) < value) return false;
-        if (req === 'items_crafted' && (player.crafting_stats?.items_crafted || 0) < value) return false;
-        if (req === 'alchemy_level' && (player.alchemy_stats?.level || 1) < value) return false;
-        if (req === 'magic_level' && (player.magic_stats?.level || 1) < value) return false;
-    }
-    return true;
+function createProgressBar(current, max) {
+    const barLength = 20;
+    const progress = Math.min(Math.max(0, current), max);
+    const filledLength = Math.floor((progress / max) * barLength);
+    const emptyLength = barLength - filledLength;
+    
+    return '█'.repeat(filledLength) + '░'.repeat(emptyLength) + 
+           ` ${current}/${max} (${Math.floor((current/max) * 100)}%)`;
 }

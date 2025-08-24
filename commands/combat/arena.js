@@ -120,69 +120,7 @@ module.exports = {
         const row2 = new ActionRowBuilder().addComponents(battleButtons.slice(2, 4));
         const row3 = new ActionRowBuilder().addComponents(healButton, leaderboardButton);
 
-        const response = await interaction.editReply({ embeds: [embed], components: [row1, row2, row3] });
-
-        // Handle button interactions
-        const filter = i => i.user.id === interaction.user.id;
-        const collector = response.createMessageComponentCollector({ filter, time: 300000 });
-
-        collector.on('collect', async (i) => {
-            try {
-                if (i.customId.startsWith('arena_')) {
-                    const action = i.customId.split('_')[1];
-
-                    if (['rookie', 'veteran', 'elite', 'legendary'].includes(action)) {
-                        await i.deferUpdate();
-                        await this.handleChallenge({ ...interaction, options: { getString: () => action } }, userProfile);
-                    } else if (action === 'heal') {
-                        userProfile.stats.hp = userProfile.stats.maxHealth || 100;
-                        await db.setPlayer(userId, userProfile);
-
-                        const healEmbed = new EmbedBuilder()
-                            .setColor('#00FF00')
-                            .setTitle('❤️ Fully Healed!')
-                            .setDescription('You rest and recover your strength.')
-                            .addFields({ name: 'Current HP', value: `${userProfile.stats.hp}`, inline: true });
-
-                        await i.update({ embeds: [healEmbed], components: [] });
-
-                        setTimeout(async () => {
-                            await this.handleView(interaction, userProfile);
-                        }, 2000);
-                    } else if (action === 'leaderboard') {
-                        const leaderboardEmbed = new EmbedBuilder()
-                            .setColor('#FFD700')
-                            .setTitle('🏆 Arena Leaderboard')
-                            .setDescription('Top Arena Champions')
-                            .addFields(
-                                { name: '🥇 1st Place', value: 'Champion Warrior (Rank: 2500)', inline: false },
-                                { name: '🥈 2nd Place', value: 'Elite Fighter (Rank: 2300)', inline: false },
-                                { name: '🥉 3rd Place', value: 'Master Duelist (Rank: 2100)', inline: false },
-                                { name: `Your Rank: ${userProfile.arenaStats.ranking}`, value: `Wins: ${userProfile.arenaStats.wins} | Losses: ${userProfile.arenaStats.losses}`, inline: false }
-                            );
-
-                        await i.update({ embeds: [leaderboardEmbed], components: [] });
-
-                        setTimeout(async () => {
-                            await this.handleView(interaction, userProfile);
-                        }, 5000);
-                    }
-                }
-            } catch (error) {
-                console.error('Error in arena button handler:', error);
-                await i.followUp({ content: '❌ An error occurred.', ephemeral: true });
-            }
-        });
-
-        collector.on('end', () => {
-            // Disable all buttons when collector ends
-            const disabledRows = [row1, row2, row3].map(row => 
-                new ActionRowBuilder().addComponents(
-                    row.components.map(button => button.setDisabled(true))
-                )
-            );
-            interaction.editReply({ components: disabledRows }).catch(() => {});
-        });
+        await interaction.editReply({ embeds: [embed], components: [row1, row2, row3] });
     },
 
     async handleChallenge(interaction, userProfile) {
