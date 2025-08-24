@@ -50,6 +50,14 @@ class ButtonInteractionHandler {
         this.actionHandlers.set('quest', this.handleQuestButtons.bind(this));
         this.actionHandlers.set('weather', this.handleWeatherButtons.bind(this));
         this.actionHandlers.set('manage', this.handleManageButtons.bind(this));
+        this.actionHandlers.set('hunt', this.handleHuntAction.bind(this));
+        this.actionHandlers.set('map', this.handleMapButtons.bind(this));
+        this.actionHandlers.set('inn', this.handleInnButtons.bind(this));
+        this.actionHandlers.set('decorate', this.handleDecorateButtons.bind(this));
+        this.actionHandlers.set('arena', this.handleArenaButtons.bind(this));
+        this.actionHandlers.set('arenafight', this.handleArenaButtons.bind(this));
+        this.actionHandlers.set('map', this.handleMapButtons.bind(this));
+        this.actionHandlers.set('location', this.handleMapLocationSelect.bind(this));
     }
 
     // Utility methods
@@ -58,14 +66,18 @@ class ButtonInteractionHandler {
             if (interaction.replied || interaction.deferred) {
                 return await interaction.editReply(content);
             } else {
-                return await interaction.reply({ ...content, ephemeral });
+                const replyOptions = { ...content };
+                if (ephemeral) {
+                    replyOptions.flags = 64; // MessageFlags.Ephemeral
+                }
+                return await interaction.reply(replyOptions);
             }
         } catch (error) {
             console.error('Error replying to interaction:', error);
             try {
-                await interaction.followUp({ 
-                    content: '❌ An error occurred while processing your request.', 
-                    ephemeral: true 
+                await interaction.followUp({
+                    content: '❌ An error occurred while processing your request.',
+                    flags: 64
                 });
             } catch (followUpError) {
                 console.error('Error sending follow-up:', followUpError);
@@ -76,16 +88,16 @@ class ButtonInteractionHandler {
     checkCooldown(userId, action, cooldownTime = 3000) {
         const key = `${userId}_${action}`;
         const now = Date.now();
-        
+
         if (this.cooldowns.has(key)) {
             const lastUsed = this.cooldowns.get(key);
             const timeLeft = cooldownTime - (now - lastUsed);
-            
+
             if (timeLeft > 0) {
                 return Math.ceil(timeLeft / 1000);
             }
         }
-        
+
         this.cooldowns.set(key, now);
         return 0;
     }
@@ -153,7 +165,7 @@ class ButtonInteractionHandler {
 
             // Get handler for the action
             const handler = this.actionHandlers.get(action);
-            
+
             if (handler) {
                 await handler(interaction, args, userId);
             } else {
@@ -165,7 +177,7 @@ class ButtonInteractionHandler {
         } catch (error) {
             console.error('Button handler error:', error);
             console.error('Stack trace:', error.stack);
-            
+
             // Try to use error handler if available
             try {
                 const RobustErrorHandler = require('../utils/robustErrorHandler.js');
@@ -193,7 +205,7 @@ class ButtonInteractionHandler {
         }
 
         const action = args.join('_');
-        
+
         try {
             // Get the manage command instance
             const manageCommand = require('../commands/admin/manage.js');
@@ -269,7 +281,7 @@ class ButtonInteractionHandler {
                     const updateData = {
                         coins: userData.coins - feedCost
                     };
-                    
+
                     // Update pet data
                     const pet = userData.pets[0];
                     pet.hunger = Math.min(100, (pet.hunger || 50) + 30);
@@ -286,8 +298,8 @@ class ButtonInteractionHandler {
                     }
                 } else {
                     await this.safeReply(interaction, {
-                        content: userData.pets?.length === 0 ? 
-                            '❌ You don\'t have any pets!' : 
+                        content: userData.pets?.length === 0 ?
+                            '❌ You don\'t have any pets!' :
                             `❌ You need at least ${feedCost} coins to feed your pet!`
                     });
                 }
@@ -297,7 +309,7 @@ class ButtonInteractionHandler {
                 if (userData.pets && userData.pets.length > 0) {
                     const pet = userData.pets[0];
                     pet.loyalty = Math.min(100, (pet.loyalty || 0) + 10);
-                    
+
                     if (await this.updateUserDataSafely(userId, { pets: userData.pets })) {
                         await this.safeReply(interaction, {
                             content: `🎾 Played with your pet! Loyalty: ${pet.loyalty}/100 ❤️`
@@ -326,7 +338,7 @@ class ButtonInteractionHandler {
                             { name: '⭐ Level', value: `${pet.level || 1}`, inline: true }
                         ])
                         .setTimestamp();
-                    
+
                     await this.safeReply(interaction, { embeds: [embed] });
                 } else {
                     await this.safeReply(interaction, {
@@ -344,7 +356,7 @@ class ButtonInteractionHandler {
 
     async handleMiningButtons(interaction, args, userId) {
         const action = args[0];
-        
+
         switch (action) {
             case 'again':
                 if (await this.executeCommand(interaction, 'mine')) {
@@ -359,7 +371,7 @@ class ButtonInteractionHandler {
                 const userData = await this.getUserDataSafely(userId);
                 const miningLevel = userData.skills?.mining || 1;
                 const miningExp = userData.skillExperience?.mining || 0;
-                
+
                 const embed = new EmbedBuilder()
                     .setColor(config.embedColors?.info || '#8B4513')
                     .setTitle('⛏️ Mining Statistics')
@@ -370,7 +382,7 @@ class ButtonInteractionHandler {
                     ])
                     .setFooter({ text: 'Keep mining to level up!' })
                     .setTimestamp();
-                
+
                 await this.safeReply(interaction, { embeds: [embed] });
                 break;
 
@@ -389,7 +401,7 @@ class ButtonInteractionHandler {
 
     async handleFishingButtons(interaction, args, userId) {
         const action = args[0];
-        
+
         switch (action) {
             case 'again':
                 if (await this.executeCommand(interaction, 'fish')) {
@@ -403,7 +415,7 @@ class ButtonInteractionHandler {
             case 'records':
                 const userData = await this.getUserDataSafely(userId);
                 const fishingLevel = userData.skills?.fishing || 1;
-                
+
                 const embed = new EmbedBuilder()
                     .setColor(config.embedColors?.info || '#4682B4')
                     .setTitle('🎣 Fishing Records')
@@ -413,7 +425,7 @@ class ButtonInteractionHandler {
                         { name: 'Biggest Catch', value: `${userData.statistics?.biggestFish || 'None'}`, inline: true }
                     ])
                     .setTimestamp();
-                
+
                 await this.safeReply(interaction, { embeds: [embed] });
                 break;
 
@@ -426,7 +438,7 @@ class ButtonInteractionHandler {
 
     async handleTravelButtons(interaction, args, userId) {
         const action = args[0];
-        
+
         switch (action) {
             case 'to':
                 await this.safeReply(interaction, {
@@ -445,7 +457,7 @@ class ButtonInteractionHandler {
                         { name: '⛰️ Mountains', value: 'Mine precious ores and gems', inline: false },
                         { name: '🏖️ Beach', value: 'Fish in the coastal waters', inline: false }
                     ]);
-                
+
                 await this.safeReply(interaction, { embeds: [embed] });
                 break;
 
@@ -458,7 +470,7 @@ class ButtonInteractionHandler {
 
     async handleUpgradeButtons(interaction, args, userId) {
         const action = args[0];
-        
+
         switch (action) {
             case 'more':
                 if (await this.executeCommand(interaction, 'upgrade')) {
@@ -482,7 +494,7 @@ class ButtonInteractionHandler {
                         { name: '❤️ Health', value: `${userData.health || 100}/${userData.maxHealth || 100}`, inline: true },
                         { name: '💙 Mana', value: `${userData.mana || 100}/${userData.maxMana || 100}`, inline: true }
                     ]);
-                
+
                 await this.safeReply(interaction, { embeds: [embed] });
                 break;
 
@@ -495,7 +507,7 @@ class ButtonInteractionHandler {
 
     async handleTavernButtons(interaction, args, userId) {
         const action = args[0];
-        
+
         switch (action) {
             case 'another':
                 if (await this.executeCommand(interaction, 'drink')) {
@@ -509,15 +521,15 @@ class ButtonInteractionHandler {
             case 'buffs':
                 const userData = await this.getUserDataSafely(userId);
                 const activeBuffs = userData.buffs?.filter(buff => buff.expires > Date.now()) || [];
-                
+
                 const embed = new EmbedBuilder()
                     .setColor(config.embedColors?.info || '#8A2BE2')
                     .setTitle('✨ Active Buffs')
-                    .setDescription(activeBuffs.length > 0 ? 
+                    .setDescription(activeBuffs.length > 0 ?
                         activeBuffs.map(buff => `${buff.type}: +${buff.value} (${Math.floor((buff.expires - Date.now()) / 1000)}s remaining)`).join('\n') :
                         'No active buffs. Visit the tavern for some drinks!')
                     .setTimestamp();
-                
+
                 await this.safeReply(interaction, { embeds: [embed] });
                 break;
 
@@ -530,7 +542,7 @@ class ButtonInteractionHandler {
                         { name: '🍷 Wine', value: '15 coins - Intelligence boost', inline: true },
                         { name: '🥃 Whiskey', value: '20 coins - Courage boost', inline: true }
                     ]);
-                
+
                 await this.safeReply(interaction, { embeds: [menuEmbed] });
                 break;
 
@@ -544,7 +556,7 @@ class ButtonInteractionHandler {
     async handleBankButtons(interaction, args, userId) {
         const action = args[0];
         const userData = await this.getUserDataSafely(userId);
-        
+
         switch (action) {
             case 'deposit':
                 const depositAmount = parseInt(args[1]) || 100;
@@ -556,7 +568,7 @@ class ButtonInteractionHandler {
                             savings: (userData.bank?.savings || 0) + depositAmount
                         }
                     };
-                    
+
                     if (await this.updateUserDataSafely(userId, updateData)) {
                         await this.safeReply(interaction, {
                             content: `🏦 Deposited ${depositAmount} coins to your savings account!\n💰 Balance: ${updateData.coins} | 🏛️ Savings: ${updateData.bank.savings}`
@@ -583,7 +595,7 @@ class ButtonInteractionHandler {
                             savings: (userData.bank?.savings || 0) - withdrawAmount
                         }
                     };
-                    
+
                     if (await this.updateUserDataSafely(userId, updateData)) {
                         await this.safeReply(interaction, {
                             content: `🏦 Withdrew ${withdrawAmount} coins from your savings account!\n💰 Balance: ${updateData.coins} | 🏛️ Savings: ${updateData.bank.savings}`
@@ -610,7 +622,7 @@ class ButtonInteractionHandler {
                         { name: '📊 Total Worth', value: `${(userData.coins || 0) + (userData.bank?.savings || 0)} coins`, inline: true }
                     ])
                     .setTimestamp();
-                
+
                 await this.safeReply(interaction, { embeds: [embed] });
                 break;
 
@@ -727,17 +739,17 @@ class ButtonInteractionHandler {
 
     async handleGambleButtons(interaction, args, userId) {
         const action = args[0];
-        
+
         if (action === 'roll') {
             const roll = Math.floor(Math.random() * 6) + 1;
             const won = roll >= 4;
             const reward = won ? 50 : 0;
-            
+
             if (won && reward > 0) {
                 const userData = await this.getUserDataSafely(userId);
                 await this.updateUserDataSafely(userId, { coins: userData.coins + reward });
             }
-            
+
             await this.safeReply(interaction, {
                 content: `🎲 You rolled a ${roll}! ${won ? `You win ${reward} coins! 🎉` : 'Better luck next time! 😔'}`
             });
@@ -771,7 +783,7 @@ class ButtonInteractionHandler {
 
     async handleDailyButtons(interaction, args, userId) {
         const action = args[0];
-        
+
         if (action === 'streak') {
             const userData = await this.getUserDataSafely(userId);
             const embed = new EmbedBuilder()
@@ -783,7 +795,7 @@ class ButtonInteractionHandler {
                     { name: '📊 Total Claims', value: `${userData.totalDailyClaims || 0}`, inline: true }
                 ])
                 .setTimestamp();
-            
+
             await this.safeReply(interaction, { embeds: [embed] });
         } else {
             await this.safeReply(interaction, {
@@ -815,11 +827,11 @@ class ButtonInteractionHandler {
 
     async handleWeatherButtons(interaction, args, userId) {
         const action = args[0];
-        
+
         if (action === 'forecast') {
             const weathers = ['☀️ Sunny', '🌧️ Rainy', '❄️ Snowy', '⛈️ Stormy', '🌤️ Partly Cloudy'];
             const currentWeather = weathers[Math.floor(Math.random() * weathers.length)];
-            
+
             const embed = new EmbedBuilder()
                 .setColor(config.embedColors?.info || '#87CEEB')
                 .setTitle('🌤️ Weather Forecast')
@@ -830,7 +842,7 @@ class ButtonInteractionHandler {
                     { name: 'Wind', value: `${Math.floor(Math.random() * 20) + 5} km/h`, inline: true }
                 ])
                 .setTimestamp();
-            
+
             await this.safeReply(interaction, { embeds: [embed] });
         } else {
             await this.safeReply(interaction, {
@@ -842,7 +854,7 @@ class ButtonInteractionHandler {
     async handleBrewButtons(interaction, args, userId) {
         const action = args[0];
         // Verify user owns this interaction
-        if (interaction.message.interaction && 
+        if (interaction.message.interaction &&
             interaction.message.interaction.user.id !== interaction.user.id) {
             return await this.safeReply(interaction, {
                 content: '❌ You cannot interact with someone else\'s brewing session!',
@@ -865,7 +877,7 @@ class ButtonInteractionHandler {
                 .setDescription('Something went wrong with the brewing process. Please try again.')
                 .setFooter({ text: 'If this persists, use /brew to start a new session' });
 
-            await this.safeReply(interaction, { 
+            await this.safeReply(interaction, {
                 embeds: [errorEmbed],
                 ephemeral: true
             });
@@ -873,7 +885,167 @@ class ButtonInteractionHandler {
         }
     }
 
-    
+    // Handle hunt action
+    async handleHuntAction(interaction, args, userId) {
+        const action = args[0];
+        switch (action) {
+            case 'start':
+                await this.safeReply(interaction, {
+                    content: '🏹 You start hunting! Keep your eyes peeled for prey!'
+                });
+                break;
+            case 'inventory':
+                await this.safeReply(interaction, {
+                    content: '🎒 Here is your hunting inventory (feature coming soon).'
+                });
+                break;
+            case 'shop':
+                await this.safeReply(interaction, {
+                    content: '🛒 Welcome to the hunt shop! (feature coming soon)'
+                });
+                break;
+            default:
+                await this.safeReply(interaction, {
+                    content: '❌ Unknown hunt action.'
+                });
+        }
+    }
+
+    // Handle map interactions
+    async handleMapButtons(interaction, args, userId) {
+        const action = args[0];
+        
+        switch (action) {
+            case 'location':
+                const location = args[1];
+                await this.safeReply(interaction, {
+                    content: `🗺️ You travel to ${location.replace('_', ' ')}. What adventures await?`
+                });
+                break;
+            case 'zoom':
+                await this.safeReply(interaction, {
+                    content: '🔍 Zooming in on the map... You can see more details now!'
+                });
+                break;
+            case 'legend':
+                await this.safeReply(interaction, {
+                    content: '📖 Map Legend:\n🏘️ Villages\n🌲 Forests\n⛰️ Mountains\n🏖️ Beaches\n🏰 Dungeons'
+                });
+                break;
+            default:
+                await this.safeReply(interaction, {
+                    content: '🗺️ Map feature is being updated. Please try again later.'
+                });
+        }
+    }
+
+    // Handle inn interactions
+    async handleInnButtons(interaction, args, userId) {
+        const roomType = args[0];
+        const userData = await this.getUserDataSafely(userId);
+        
+        const roomCosts = {
+            basic: 50,
+            comfort: 100,
+            luxury: 200
+        };
+        
+        const cost = roomCosts[roomType] || 50;
+        
+        if (userData.coins < cost) {
+            await this.safeReply(interaction, {
+                content: `❌ You need ${cost} coins for this room! You have ${userData.coins} coins.`
+            });
+            return;
+        }
+        
+        // Simulate resting
+        const healthRestore = roomType === 'luxury' ? 100 : roomType === 'comfort' ? 75 : 50;
+        const newHealth = Math.min(100, (userData.health || 100) + healthRestore);
+        
+        await this.updateUserDataSafely(userId, {
+            coins: userData.coins - cost,
+            health: newHealth
+        });
+        
+        await this.safeReply(interaction, {
+            content: `😴 You rest in the ${roomType} room and restore ${healthRestore} health! (-${cost} coins)`
+        });
+    }
+
+    // Handle decoration interactions
+    async handleDecorateButtons(interaction, args, userId) {
+        const decorationType = args[0];
+        const userData = await this.getUserDataSafely(userId);
+        
+        const decorationCosts = {
+            painting: 100,
+            furniture: 200
+        };
+        
+        const cost = decorationCosts[decorationType] || 100;
+        
+        if (userData.coins < cost) {
+            await this.safeReply(interaction, {
+                content: `❌ You need ${cost} coins for this decoration! You have ${userData.coins} coins.`
+            });
+            return;
+        }
+        
+        await this.updateUserDataSafely(userId, {
+            coins: userData.coins - cost
+        });
+        
+        await this.safeReply(interaction, {
+            content: `🏡 You add a beautiful ${decorationType} to your house! (-${cost} coins)`
+        });
+    }
+
+    // Handle arena interactions
+    async handleArenaButtons(interaction, args, userId) {
+        const action = args[0];
+        
+        switch (action) {
+            case 'fight_start':
+                await this.safeReply(interaction, {
+                    content: '⚔️ The arena battle begins! Prepare for combat!'
+                });
+                break;
+            case 'stats_view':
+                const userData = await this.getUserDataSafely(userId);
+                await this.safeReply(interaction, {
+                    content: `📊 Arena Stats:\n❤️ Health: ${userData.health || 100}\n⚔️ Attack: ${userData.attack || 10}\n🛡️ Defense: ${userData.defense || 5}`
+                });
+                break;
+            case 'leave':
+                await this.safeReply(interaction, {
+                    content: '🚪 You leave the arena. Perhaps another time...'
+                });
+                break;
+            default:
+                await this.safeReply(interaction, {
+                    content: '⚔️ Arena action processed.'
+                });
+        }
+    }
+
+    // Handle map location selections
+    async handleMapLocationSelect(interaction, args, userId) {
+        // Handle both button clicks and select menu values
+        const location = args[0] || interaction.values?.[0] || 'unknown location';
+        const locationMap = {
+            'village_square': '🏘️ Village Square - The heart of the community with shops and friendly NPCs.',
+            'forest_entrance': '🌲 Forest Entrance - Wild creatures and hidden treasures await.',
+            'mountain_pass': '⛰️ Mountain Pass - Rich mining deposits and challenging terrain.',
+            'beach_shore': '🏖️ Beach Shore - Perfect for fishing and relaxation.'
+        };
+        
+        const description = locationMap[location] || `You explore the ${location.replace('_', ' ')}.`;
+        
+        await this.safeReply(interaction, {
+            content: `🗺️ ${description}`
+        }, false);
+    }
 }
 
 // Create and export the handler instance
@@ -882,7 +1054,7 @@ const buttonHandler = new ButtonInteractionHandler();
 module.exports = {
     ButtonInteractionHandler,
     handleButtonInteraction: buttonHandler.handleButtonInteraction.bind(buttonHandler),
-    
+
     // Legacy export for backward compatibility
     async handleButtonInteraction(interaction) {
         return await buttonHandler.handleButtonInteraction(interaction);

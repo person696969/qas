@@ -260,7 +260,7 @@ class InteractionHandler {
         if (!command) {
             await this.safeReply(interaction, {
                 content: '❌ Command not found or not properly loaded.',
-                ephemeral: true
+                flags: 64
             });
             return;
         }
@@ -376,6 +376,18 @@ class InteractionHandler {
             const selectedValue = interaction.values[0];
             const { handler, commandName, action } = this.parseCustomId(interaction.customId, 'selectMenu');
 
+            // Special handling for map location select
+            if (interaction.customId === 'map_location_select') {
+                const buttonHandler = require('./buttonHandler.js');
+                await buttonHandler.handleButtonInteraction({
+                    ...interaction,
+                    customId: `location_${selectedValue}`,
+                    isButton: () => false,
+                    isStringSelectMenu: () => true
+                });
+                return;
+            }
+
             if (handler) {
                 await handler(interaction, selectedValue, interaction.user.id);
                 if (this.options.enableMetrics) {
@@ -401,7 +413,7 @@ class InteractionHandler {
                 console.warn(`No handler found for select menu: ${interaction.customId} with value: ${selectedValue}`);
                 await this.safeReply(interaction, {
                     content: '❌ This menu selection is no longer available. Please try using the command again.',
-                    ephemeral: true
+                    flags: 64
                 });
             }
 
@@ -655,9 +667,11 @@ class InteractionHandler {
             } else if (interaction.deferred && !interaction.replied) {
                 await interaction.editReply(options);
             } else {
-                // Force ephemeral for followups
-                options.ephemeral = true;
-                await interaction.followUp(options);
+                // Force ephemeral for followups using flags
+                const followUpOptions = { ...options };
+                followUpOptions.flags = 64; // MessageFlags.Ephemeral
+                delete followUpOptions.ephemeral;
+                await interaction.followUp(followUpOptions);
             }
             return true;
         } catch (error) {

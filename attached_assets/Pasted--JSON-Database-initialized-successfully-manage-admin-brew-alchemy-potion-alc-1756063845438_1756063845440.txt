@@ -1,0 +1,175 @@
+✅ JSON Database initialized successfully
+   ✅ manage (admin)
+   ✅ brew (alchemy)
+   ✅ potion (alchemy)
+   ✅ transmute (alchemy)
+   ✅ bank (bank)
+   ✅ loan (bank)
+   ✅ transfer (bank)
+   ✅ forge (blacksmith)
+   ✅ repair (blacksmith)
+   ✅ upgrade (blacksmith)
+   ✅ arena (combat)
+   ✅ arenafight (combat)
+   ✅ tournament (combat)
+   ✅ craft (crafting)
+   ✅ recipes (crafting)
+   ✅ specialize (crafting)
+   ✅ workbench (crafting)
+   ✅ answer (economy)
+   ✅ auction (economy)
+   ✅ buy (economy)
+   ✅ daily (economy)
+   ✅ equip (economy)
+   ✅ inventory (economy)
+   ✅ invest (economy)
+   ✅ profile (economy)
+   ✅ shop (economy)
+   ✅ solve (economy)
+   ✅ unequip (economy)
+   ✅ work (economy)
+   ✅ dungeon (exploration)
+   ✅ expedition (exploration)
+   ✅ fish (exploration)
+   ✅ forage (exploration)
+   ✅ mine (exploration)
+   ✅ scout (exploration)
+   ✅ farm (farming)
+   ✅ garden (farming)
+   ✅ harvest (farming)
+   ✅ plant (farming)
+   ✅ water (farming)
+   ✅ cast (fishing)
+   ✅ market (fishing)
+   ✅ fishing (fishing)
+   ✅ spots (fishing)
+   ✅ tackle (fishing)
+   ✅ gamble (gambling)
+   ✅ roulette (gambling)
+   ✅ slots (gambling)
+   ✅ challenge (games)
+   ✅ hintvote (games)
+   ✅ hunts (games)
+   ✅ lottery (games)
+   ✅ slotgame (games)
+   ✅ gamesolve (games)
+   ✅ backup (general)
+   ✅ help (general)
+   ✅ hunt (general)
+   ✅ invite (general)
+   ✅ leaderboard (general)
+   ✅ ping (general)
+   ✅ riddle (general)
+⚠️ Skipped solve.js: Duplicate command name: solve
+   ✅ status (general)
+   ✅ treasure (general)
+⚠️ Skipped work.js: Duplicate command name: work
+   ✅ build (housing)
+   ✅ decorate (housing)
+   ✅ house (housing)
+   ✅ room (housing)
+   ✅ enchant (magic)
+   ✅ research (magic)
+   ✅ spell (magic)
+   ✅ spellcraft (magic)
+   ✅ bazaar (merchant)
+   ✅ caravan (merchant)
+   ✅ marketplace (merchant)
+   ✅ merchant (merchant)
+   ✅ excavate (mining)
+   ✅ tunnel (mining)
+   ✅ pet (pets)
+   ✅ stable (pets)
+   ✅ train (pets)
+   ✅ adventure (quests)
+   ✅ quest (quests)
+   ✅ battle (rpg)
+   ✅ dungeonraid (rpg)
+   ✅ raid (rpg)
+   ✅ mastery (skills)
+   ✅ profession (skills)
+⚠️ Skipped train.js: Duplicate command name: train
+   ✅ achievements (social)
+   ✅ guild (social)
+   ✅ party (social)
+   ✅ rankings (social)
+   ✅ drink (tavern)
+   ✅ inn (tavern)
+   ✅ socialize (tavern)
+   ✅ mount (transportation)
+   ✅ travel (transportation)
+   ✅ voyage (transportation)
+   ✅ calendar (utility)
+   ✅ convert (utility)
+   ✅ info (utility)
+   ✅ map (utility)
+   ✅ settings (utility)
+   ✅ stats (utility)
+   ✅ tips (utility)
+   ✅ vote (utility)
+   ✅ alert (weather)
+   ✅ weather (weather)
+   ✅ forecast (weather)
+
+📊 Enhanced Command Loading Complete:
+   ✅ Successfully loaded: 108 commands
+   ❌ Failed to load: 3 commands
+   📂 Categories: 26 categories
+
+❌ Failed Commands Details:
+   • solve.js: Duplicate command name: solve
+   • work.js: Duplicate command name: work
+   • train.js: Duplicate command name: train
+============================================================
+🎮 testing102#9723 is now online!
+🏴‍☠️ RPG Treasure Hunt Bot v3.0.1
+🎯 Loaded 108 slash commands
+🌟 Active in 1 servers
+⚔️ Serving 1 adventurers
+============================================================
+🔄 Started refreshing application (/) commands...
+📝 Preparing to register 108 commands
+⚠️ Warning: 108 commands exceed Discord's limit of 100. Using first 100 commands.
+✅ Successfully reloaded 100 global application (/) commands.
+✅ Updated commands for guild: Blockman Go
+🎉 Command registration complete! Commands should be visible immediately.
+🔄 Command cache refreshed
+No handler found for select menu: map_location_select with value: village_square
+(node:287) Warning: Supplying "ephemeral" for interaction response options is deprecated. Utilize flags instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Help command error: ExpectedConstraintError > s.number().lessThanOrEqual()
+  Invalid number value
+
+  Expected: expected <= 25
+
+  Received:
+  | 26
+
+    at Object.run (/home/runner/workspace/node_modules/@sapphire/shapeshift/dist/cjs/index.cjs:1580:72)
+    at /home/runner/workspace/node_modules/@sapphire/shapeshift/dist/cjs/index.cjs:972:67
+    at Array.reduce (<anonymous>)
+    at _NumberValidator.parse (/home/runner/workspace/node_modules/@sapphire/shapeshift/dist/cjs/index.cjs:972:29)
+    at StringSelectMenuBuilder.addOptions (/home/runner/workspace/node_modules/@discordjs/builders/dist/index.js:1119:28)
+    at StringSelectMenuBuilder.addOptions (/home/runner/workspace/node_modules/discord.js/src/structures/StringSelectMenuBuilder.js:49:18)
+    at Object.showMainHelp (/home/runner/workspace/commands/general/help.js:94:14)
+    at Object.execute (/home/runner/workspace/commands/general/help.js:63:28)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+Command error details: ExpectedConstraintError > s.number().lessThanOrEqual()
+  Invalid number value
+
+  Expected: expected <= 25
+
+  Received:
+  | 26
+
+    at Object.run (/home/runner/workspace/node_modules/@sapphire/shapeshift/dist/cjs/index.cjs:1580:72)
+    at /home/runner/workspace/node_modules/@sapphire/shapeshift/dist/cjs/index.cjs:972:67
+    at Array.reduce (<anonymous>)
+    at _NumberValidator.parse (/home/runner/workspace/node_modules/@sapphire/shapeshift/dist/cjs/index.cjs:972:29)
+    at StringSelectMenuBuilder.addOptions (/home/runner/workspace/node_modules/@discordjs/builders/dist/index.js:1119:28)
+    at StringSelectMenuBuilder.addOptions (/home/runner/workspace/node_modules/discord.js/src/structures/StringSelectMenuBuilder.js:49:18)
+    at Object.showMainHelp (/home/runner/workspace/commands/general/help.js:94:14)
+    at Object.execute (/home/runner/workspace/commands/general/help.js:63:28)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)

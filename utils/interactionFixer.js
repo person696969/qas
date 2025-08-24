@@ -1,469 +1,260 @@
-/**
- * Interaction Fixing Utilities
- * Provides robust fixes for all Discord interaction issues
- */
 
 const { EmbedBuilder, MessageFlags } = require('discord.js');
 const config = require('../config.js');
 
-module.exports = {
+/**
+ * Universal Interaction Fixer
+ * Handles all interaction types with comprehensive error recovery
+ */
+class InteractionFixer {
+    constructor() {
+        this.activeInteractions = new Map();
+        this.handlerCache = new Map();
+    }
+
     /**
-     * Create a safe interaction wrapper that prevents errors
-     * @param {Object} interaction - Original Discord interaction
-     * @returns {Object} - Enhanced interaction with error handling
+     * Fix any interaction with universal error handling
+     * @param {Object} interaction - Discord interaction
+     * @param {Function} handler - Handler function
      */
-    createSafeInteraction(interaction) {
-        if (!interaction) {
-            throw new Error('No interaction provided to createSafeInteraction');
+    async fixInteraction(interaction, handler) {
+        if (!interaction || !handler) {
+            console.error('InteractionFixer: Missing interaction or handler');
+            return false;
         }
 
-        // Store original methods to prevent infinite recursion
-        const originalReply = interaction.reply.bind(interaction);
-        const originalFollowUp = interaction.followUp.bind(interaction);
-        const originalEditReply = interaction.editReply.bind(interaction);
+        const interactionId = interaction.id;
+        const startTime = Date.now();
 
-        const safeInteraction = {
-            ...interaction,
-            
-            // Safe reply method
-            reply: async (options) => {
-                if (!options) {
-                    console.error('No options provided to safe reply');
-                    return null;
-                }
+        try {
+            // Track active interaction
+            this.activeInteractions.set(interactionId, {
+                type: this.getInteractionType(interaction),
+                userId: interaction.user?.id,
+                startTime
+            });
 
-                try {
-                    // Check interaction state before attempting reply
-                    if (interaction.replied || interaction.deferred) {
-                        console.warn('Interaction already replied/deferred, using editReply instead');
-                        return await originalEditReply(options);
-                    }
-                    return await originalReply(options);
-                } catch (error) {
-                    console.error('Safe reply error:', error);
-                    
-                    // Fallback to channel send
-                    try {
-                        if (interaction.channel) {
-                            const channelOptions = this.prepareChannelOptions(options);
-                            return await interaction.channel.send(channelOptions);
-                        }
-                    } catch (fallbackError) {
-                        console.error('Fallback reply failed:', fallbackError);
-                        throw fallbackError;
-                    }
-                }
-            },
-
-            // Safe followUp method
-            followUp: async (options) => {
-                if (!options) {
-                    console.error('No options provided to safe followUp');
-                    return null;
-                }
-
-                try {
-                    return await originalFollowUp(options);
-                } catch (error) {
-                    console.error('Safe followUp error:', error);
-                    
-                    // Fallback to channel send
-                    try {
-                        if (interaction.channel) {
-                            const channelOptions = this.prepareChannelOptions(options);
-                            return await interaction.channel.send(channelOptions);
-                        }
-                    } catch (fallbackError) {
-                        console.error('FollowUp fallback failed:', fallbackError);
-                        throw fallbackError;
-                    }
-                }
-            },
-
-            // Safe editReply method
-            editReply: async (options) => {
-                if (!options) {
-                    console.error('No options provided to safe editReply');
-                    return null;
-                }
-
-                try {
-                    return await originalEditReply(options);
-                } catch (error) {
-                    console.error('Safe editReply error:', error);
-                    
-                    // Fallback to channel send
-                    try {
-                        if (interaction.channel) {
-                            const channelOptions = this.prepareChannelOptions(options);
-                            return await interaction.channel.send(channelOptions);
-                        }
-                    } catch (fallbackError) {
-                        console.error('EditReply fallback failed:', fallbackError);
-                        throw fallbackError;
-                    }
-                }
+            // Validate interaction
+            const validation = this.validateInteraction(interaction);
+            if (!validation.valid) {
+                await this.sendErrorResponse(interaction, 'Validation Error', validation.errors.join('\n'));
+                return false;
             }
+
+            // Execute handler with timeout
+            const result = await Promise.race([
+                handler(interaction),
+                this.createTimeout(15000) // 15 second timeout
+            ]);
+
+            return result !== 'TIMEOUT';
+
+        } catch (error) {
+            console.error(`InteractionFixer error for ${interactionId}:`, error);
+            await this.handleInteractionError(interaction, error);
+            return false;
+        } finally {
+            // Cleanup
+            this.activeInteractions.delete(interactionId);
+        }
+    }
+
+    /**
+     * Get interaction type string
+     * @param {Object} interaction - Discord interaction
+     * @returns {String} - Interaction type
+     */
+    getInteractionType(interaction) {
+        if (interaction.isChatInputCommand?.()) return 'slash';
+        if (interaction.isButton?.()) return 'button';
+        if (interaction.isStringSelectMenu?.()) return 'selectMenu';
+        if (interaction.isModalSubmit?.()) return 'modal';
+        if (interaction.isAutocomplete?.()) return 'autocomplete';
+        return 'unknown';
+    }
+
+    /**
+     * Validate interaction with comprehensive checks
+     * @param {Object} interaction - Discord interaction
+     * @returns {Object} - Validation result
+     */
+    validateInteraction(interaction) {
+        const result = {
+            valid: true,
+            errors: []
         };
 
-        return safeInteraction;
-    },
+        if (!interaction.user?.id) {
+            result.valid = false;
+            result.errors.push('Missing user ID');
+        }
+
+        if (!interaction.isRepliable?.()) {
+            result.valid = false;
+            result.errors.push('Interaction not repliable');
+        }
+
+        // Check if interaction is expired
+        const age = Date.now() - (interaction.createdTimestamp || Date.now());
+        if (age > 15 * 60 * 1000) { // 15 minutes
+            result.valid = false;
+            result.errors.push('Interaction expired');
+        }
+
+        return result;
+    }
 
     /**
-     * Prepare options for channel send (remove interaction-specific flags)
-     * @param {Object|String} options - Original options
-     * @returns {Object} - Channel-safe options
+     * Safe reply with multiple fallback methods
+     * @param {Object} interaction - Discord interaction
+     * @param {Object} options - Reply options
+     * @param {Boolean} ephemeral - Whether reply should be ephemeral
      */
-    prepareChannelOptions(options) {
-        if (typeof options === 'string') {
-            return { content: options };
-        }
-
-        const channelOptions = { ...options };
-        
-        // Remove interaction-specific properties
-        delete channelOptions.flags;
-        delete channelOptions.ephemeral;
-        
-        // Ensure content exists if no embeds
-        if (!channelOptions.content && !channelOptions.embeds?.length) {
-            channelOptions.content = 'Command executed successfully!';
-        }
-
-        return channelOptions;
-    },
-
-    /**
-     * Fix button interaction issues
-     * @param {Object} interaction - Button interaction
-     * @param {Function} handler - Handler function to execute
-     */
-    async fixButtonInteraction(interaction, handler) {
-        if (!interaction) {
-            console.error('Button interaction fix error: No interaction provided');
-            return;
-        }
-
-        if (!handler || typeof handler !== 'function') {
-            console.error('Button interaction fix error: No valid handler provided');
-            return;
+    async safeReply(interaction, options, ephemeral = true) {
+        if (!interaction || !options) {
+            console.error('SafeReply: Missing interaction or options');
+            return false;
         }
 
         try {
-            // Validate button interaction
-            if (!interaction.isButton || !interaction.isButton()) {
-                throw new Error('Invalid button interaction type');
+            // Prepare options with proper flags
+            const replyOptions = { ...options };
+            if (ephemeral && !replyOptions.flags) {
+                replyOptions.flags = MessageFlags.Ephemeral;
+            }
+            delete replyOptions.ephemeral; // Remove deprecated property
+
+            // Determine reply method
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply(replyOptions);
+            } else if (interaction.deferred && !interaction.replied) {
+                delete replyOptions.flags; // Can't use flags in editReply
+                await interaction.editReply(replyOptions);
+            } else {
+                replyOptions.flags = MessageFlags.Ephemeral;
+                await interaction.followUp(replyOptions);
             }
 
-            if (!interaction.customId) {
-                throw new Error('Missing customId in button interaction');
-            }
+            return true;
 
-            if (!interaction.user?.id) {
-                throw new Error('Missing user information in button interaction');
-            }
-
-            const safeInteraction = this.createSafeInteraction(interaction);
-            return await handler(safeInteraction);
         } catch (error) {
-            console.error('Button interaction fix error:', error);
-            
-            await this.sendErrorResponse(interaction, 'Button Error', 'This button interaction encountered an error. Please try again.');
+            console.error('SafeReply error:', error);
+            return await this.fallbackReply(interaction, options);
         }
-    },
+    }
 
     /**
-     * Fix select menu interaction issues
-     * @param {Object} interaction - Select menu interaction
-     * @param {Function} handler - Handler function to execute
+     * Fallback reply method using channel
+     * @param {Object} interaction - Discord interaction
+     * @param {Object} options - Reply options
      */
-    async fixSelectMenuInteraction(interaction, handler) {
-        if (!interaction) {
-            console.error('Select menu interaction fix error: No interaction provided');
-            return;
-        }
-
-        if (!handler || typeof handler !== 'function') {
-            console.error('Select menu interaction fix error: No valid handler provided');
-            return;
-        }
-
+    async fallbackReply(interaction, options) {
         try {
-            // Validate select menu interaction
-            if (!interaction.isStringSelectMenu || !interaction.isStringSelectMenu()) {
-                throw new Error('Invalid select menu interaction type');
+            if (!interaction.channel) {
+                console.error('No channel available for fallback reply');
+                return false;
             }
 
-            if (!interaction.values || !Array.isArray(interaction.values) || !interaction.values[0]) {
-                throw new Error('Missing or invalid values in select menu interaction');
-            }
+            const channelOptions = { ...options };
+            delete channelOptions.flags;
+            delete channelOptions.ephemeral;
 
-            if (!interaction.user?.id) {
-                throw new Error('Missing user information in select menu interaction');
-            }
+            await interaction.channel.send(channelOptions);
+            return true;
 
-            const safeInteraction = this.createSafeInteraction(interaction);
-            return await handler(safeInteraction);
         } catch (error) {
-            console.error('Select menu interaction fix error:', error);
-            
-            await this.sendErrorResponse(interaction, 'Menu Error', 'This menu selection encountered an error. Please try again.');
+            console.error('Fallback reply failed:', error);
+            return false;
         }
-    },
+    }
 
     /**
-     * Send error response with multiple fallback methods
+     * Handle interaction errors with comprehensive response
+     * @param {Object} interaction - Discord interaction
+     * @param {Error} error - Error object
+     */
+    async handleInteractionError(interaction, error) {
+        const errorEmbed = new EmbedBuilder()
+            .setColor(config?.embedColors?.error || '#FF0000')
+            .setTitle('⚠️ Interaction Error')
+            .setDescription('An error occurred while processing your interaction.')
+            .addFields([
+                { name: 'Error Type', value: error?.name || 'Unknown', inline: true },
+                { name: 'Timestamp', value: `<t:${Math.floor(Date.now() / 1000)}:f>`, inline: true }
+            ])
+            .setFooter({ text: 'Please try again. If this persists, contact support.' });
+
+        await this.safeReply(interaction, { embeds: [errorEmbed] }, true);
+    }
+
+    /**
+     * Send error response with proper formatting
      * @param {Object} interaction - Discord interaction
      * @param {String} title - Error title
      * @param {String} description - Error description
      */
     async sendErrorResponse(interaction, title, description) {
-        const errorColor = config?.embedColors?.error || '#FF0000';
-        
         const embed = new EmbedBuilder()
-            .setColor(errorColor)
+            .setColor(config?.embedColors?.error || '#FF0000')
             .setTitle(`⚠️ ${title}`)
             .setDescription(description)
             .setTimestamp();
 
-        const errorOptions = {
-            embeds: [embed],
-            flags: MessageFlags.Ephemeral
-        };
-
-        try {
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply(errorOptions);
-            } else if (interaction.deferred && !interaction.replied) {
-                await interaction.editReply({ embeds: [embed] });
-            } else {
-                await interaction.followUp(errorOptions);
-            }
-        } catch (replyError) {
-            console.error('Failed to send error response:', replyError);
-            
-            // Channel fallback
-            try {
-                if (interaction.channel) {
-                    await interaction.channel.send({ embeds: [embed] });
-                }
-            } catch (channelError) {
-                console.error('Channel error response fallback failed:', channelError);
-                
-                // Final text fallback
-                try {
-                    if (interaction.channel) {
-                        await interaction.channel.send(`❌ ${title}: ${description}`);
-                    }
-                } catch (finalError) {
-                    console.error('All error response methods failed:', finalError);
-                }
-            }
-        }
-    },
+        await this.safeReply(interaction, { embeds: [embed] }, true);
+    }
 
     /**
-     * Create enhanced fake interaction for prefix commands
-     * @param {Object} message - Discord message object
-     * @param {Object} client - Discord client
-     * @param {String} commandName - Command name
-     * @returns {Object} - Enhanced fake interaction
+     * Create timeout promise
+     * @param {Number} ms - Timeout in milliseconds
      */
-    createPrefixInteraction(message, client, commandName) {
-        if (!message) {
-            throw new Error('No message provided to createPrefixInteraction');
-        }
-
-        if (!client) {
-            throw new Error('No client provided to createPrefixInteraction');
-        }
-
-        const safeCommandName = String(commandName || 'unknown');
-
-        // Create the fake interaction object
-        const fakeInteraction = {
-            user: message.author,
-            member: message.member,
-            guild: message.guild,
-            channel: message.channel,
-            client: client,
-            commandName: safeCommandName,
-            createdTimestamp: message.createdTimestamp,
-            deferred: false,
-            replied: false,
-            customId: null,
-            values: null,
-            _deferredMessage: null,
-            
-            // Interaction type checkers
-            isButton: () => false,
-            isChatInputCommand: () => true, // Simulate as chat command
-            isStringSelectMenu: () => false,
-            isCommand: () => true,
-            
-            // Options object with safe getters
-            options: {
-                getString: (name) => {
-                    // Could parse from message content if needed
-                    return null;
-                },
-                getInteger: (name) => {
-                    // Could parse from message content if needed
-                    return null;
-                },
-                getNumber: (name) => {
-                    // Could parse from message content if needed
-                    return null;
-                },
-                getBoolean: (name) => {
-                    // Could parse from message content if needed
-                    return null;
-                },
-                getUser: (name) => {
-                    // Could parse mentions if needed
-                    return null;
-                },
-                getChannel: (name) => {
-                    // Could parse channel mentions if needed
-                    return null;
-                },
-                getRole: (name) => {
-                    // Could parse role mentions if needed
-                    return null;
-                },
-                getAttachment: (name) => {
-                    // Could check message attachments if needed
-                    return message.attachments?.first() || null;
-                }
-            }
-        };
-
-        // Add methods to the fake interaction object
-        fakeInteraction.reply = async (options) => {
-            if (!options) {
-                console.error('No options provided to prefix reply');
-                return null;
-            }
-
-            try {
-                if (typeof options === 'string') {
-                    const result = await message.reply(options);
-                    fakeInteraction.replied = true;
-                    return result;
-                }
-                
-                // Remove interaction-specific flags for message replies
-                const messageOptions = { ...options };
-                delete messageOptions.flags;
-                delete messageOptions.ephemeral;
-                
-                const result = await message.reply(messageOptions);
-                fakeInteraction.replied = true;
-                return result;
-            } catch (error) {
-                console.error('Prefix reply error:', error);
-                
-                try {
-                    const result = await message.channel.send({ 
-                        content: 'Command executed successfully!' 
-                    });
-                    fakeInteraction.replied = true;
-                    return result;
-                } catch (fallbackError) {
-                    console.error('Prefix reply fallback failed:', fallbackError);
-                    throw fallbackError;
-                }
-            }
-        };
-        
-        fakeInteraction.followUp = async (options) => {
-            if (!options) {
-                console.error('No options provided to prefix followUp');
-                return null;
-            }
-
-            try {
-                if (typeof options === 'string') {
-                    return await message.channel.send(options);
-                }
-                
-                // Remove interaction-specific flags
-                const channelOptions = { ...options };
-                delete channelOptions.flags;
-                delete channelOptions.ephemeral;
-                
-                return await message.channel.send(channelOptions);
-            } catch (error) {
-                console.error('Prefix followUp error:', error);
-                throw error;
-            }
-        };
-        
-        fakeInteraction.editReply = async (options) => {
-            // For prefix commands, editReply becomes a new message via followUp
-            return await fakeInteraction.followUp(options);
-        };
-        
-        fakeInteraction.deferReply = async (options = {}) => {
-            // For prefix commands, we can send a "thinking" message
-            try {
-                if (options.ephemeral) {
-                    // Can't do ephemeral in prefix commands
-                    fakeInteraction.deferred = true;
-                    return Promise.resolve();
-                }
-                
-                const thinkingMsg = await message.channel.send('🤔 Processing...');
-                
-                // Store reference for potential editing
-                fakeInteraction._deferredMessage = thinkingMsg;
-                fakeInteraction.deferred = true;
-                
-                return thinkingMsg;
-            } catch (error) {
-                console.error('Prefix deferReply error:', error);
-                fakeInteraction.deferred = true; // Mark as deferred even if message failed
-                return Promise.resolve();
-            }
-        };
-
-        return fakeInteraction;
-    },
+    createTimeout(ms) {
+        return new Promise(resolve => {
+            setTimeout(() => resolve('TIMEOUT'), ms);
+        });
+    }
 
     /**
-     * Validate and fix any interaction type
-     * @param {Object} interaction - Any Discord interaction
-     * @param {Function} handler - Handler function
+     * Get active interaction count
      */
-    async fixAnyInteraction(interaction, handler) {
-        if (!interaction) {
-            console.error('Fix any interaction error: No interaction provided');
-            return;
-        }
+    getActiveCount() {
+        return this.activeInteractions.size;
+    }
 
-        if (!handler || typeof handler !== 'function') {
-            console.error('Fix any interaction error: No valid handler provided');
-            return;
-        }
+    /**
+     * Clean up expired interactions
+     */
+    cleanup() {
+        const now = Date.now();
+        const maxAge = 15 * 60 * 1000; // 15 minutes
 
-        try {
-            // Determine interaction type and use appropriate fixer
-            if (interaction.isButton && interaction.isButton()) {
-                return await this.fixButtonInteraction(interaction, handler);
-            } else if (interaction.isStringSelectMenu && interaction.isStringSelectMenu()) {
-                return await this.fixSelectMenuInteraction(interaction, handler);
-            } else if (interaction.isChatInputCommand && interaction.isChatInputCommand()) {
-                // For slash commands, just use safe interaction wrapper
-                const safeInteraction = this.createSafeInteraction(interaction);
-                return await handler(safeInteraction);
-            } else {
-                // Generic safe wrapper for other interaction types
-                const safeInteraction = this.createSafeInteraction(interaction);
-                return await handler(safeInteraction);
+        for (const [id, data] of this.activeInteractions.entries()) {
+            if (now - data.startTime > maxAge) {
+                this.activeInteractions.delete(id);
             }
-        } catch (error) {
-            console.error('Fix any interaction error:', error);
-            await this.sendErrorResponse(interaction, 'Interaction Error', 'This interaction encountered an error. Please try again.');
         }
+    }
+}
+
+// Create singleton instance
+const interactionFixer = new InteractionFixer();
+
+// Auto cleanup every 5 minutes
+setInterval(() => interactionFixer.cleanup(), 5 * 60 * 1000);
+
+module.exports = {
+    InteractionFixer,
+    interactionFixer,
+    
+    // Convenience methods
+    async fixInteraction(interaction, handler) {
+        return await interactionFixer.fixInteraction(interaction, handler);
+    },
+    
+    async safeReply(interaction, options, ephemeral = true) {
+        return await interactionFixer.safeReply(interaction, options, ephemeral);
+    },
+    
+    async handleError(interaction, error) {
+        return await interactionFixer.handleInteractionError(interaction, error);
     }
 };

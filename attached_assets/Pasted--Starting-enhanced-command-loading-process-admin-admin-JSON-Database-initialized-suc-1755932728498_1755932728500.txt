@@ -1,0 +1,255 @@
+🔄 Starting enhanced command loading process...
+   ✅ admin (admin)
+✅ JSON Database initialized successfully
+   ✅ manage (admin)
+⚠️ Skipped admin.js: Missing command.data property
+   ✅ brew (alchemy)
+   ✅ potion (alchemy)
+   ✅ transmute (alchemy)
+   ✅ bank (bank)
+   ✅ loan (bank)
+   ✅ transfer (bank)
+   ✅ forge (blacksmith)
+   ✅ repair (blacksmith)
+   ✅ upgrade (blacksmith)
+   ✅ arena (combat)
+⚠️ Skipped arena.new.js: Missing command.data property
+   ✅ tournament (combat)
+   ✅ craft (crafting)
+   ✅ recipes (crafting)
+   ✅ specialize (crafting)
+   ✅ workbench (crafting)
+   ✅ answer (economy)
+   ✅ auction (economy)
+   ✅ buy (economy)
+   ✅ daily (economy)
+   ✅ equip (economy)
+   ✅ inventory (economy)
+   ✅ invest (economy)
+   ✅ profile (economy)
+   ✅ shop (economy)
+⚠️ Skipped solve.js: Missing command.data property
+   ✅ unequip (economy)
+   ✅ work (economy)
+   ✅ dungeon (exploration)
+   ✅ expedition (exploration)
+   ✅ fish (exploration)
+   ✅ forage (exploration)
+   ✅ mine (exploration)
+   ✅ scout (exploration)
+   ✅ farm (farming)
+   ✅ garden (farming)
+   ✅ harvest (farming)
+   ✅ plant (farming)
+   ✅ water (farming)
+   ✅ cast (fishing)
+   ✅ market (fishing)
+   ✅ fishing (fishing)
+   ✅ spots (fishing)
+   ✅ tackle (fishing)
+   ✅ gamble (gambling)
+   ✅ roulette (gambling)
+   ✅ slots (gambling)
+   ✅ challenge (games)
+   ✅ hintvote (games)
+   ✅ hunts (games)
+   ✅ lottery (games)
+   ✅ slotgame (games)
+⚠️ Skipped solve.js: Missing command.data property
+   ✅ backup (general)
+   ✅ help (general)
+   ✅ hunt (general)
+   ✅ invite (general)
+   ✅ leaderboard (general)
+   ✅ ping (general)
+   ✅ riddle (general)
+   ✅ solve (general)
+   ✅ status (general)
+   ✅ treasure (general)
+⚠️ Skipped work.js: Duplicate command name: work
+   ✅ build (housing)
+   ✅ decorate (housing)
+   ✅ house (housing)
+   ✅ room (housing)
+   ✅ enchant (magic)
+   ✅ research (magic)
+   ✅ spell (magic)
+   ✅ spellcraft (magic)
+   ✅ bazaar (merchant)
+   ✅ caravan (merchant)
+   ✅ marketplace (merchant)
+   ✅ merchant (merchant)
+   ✅ excavate (mining)
+   ✅ tunnel (mining)
+   ✅ pet (pets)
+   ✅ stable (pets)
+   ✅ train (pets)
+   ✅ adventure (quests)
+   ✅ quest (quests)
+   ✅ battle (rpg)
+   ✅ dungeonraid (rpg)
+   ✅ raid (rpg)
+   ✅ mastery (skills)
+   ✅ profession (skills)
+⚠️ Skipped train.js: Duplicate command name: train
+   ✅ achievements (social)
+   ✅ guild (social)
+   ✅ party (social)
+   ✅ rankings (social)
+   ✅ drink (tavern)
+   ✅ inn (tavern)
+   ✅ socialize (tavern)
+   ✅ mount (transportation)
+   ✅ travel (transportation)
+   ✅ voyage (transportation)
+   ✅ calendar (utility)
+   ✅ convert (utility)
+   ✅ info (utility)
+   ✅ map (utility)
+   ✅ settings (utility)
+   ✅ stats (utility)
+   ✅ tips (utility)
+   ✅ vote (utility)
+   ✅ alert (weather)
+   ✅ weather (weather)
+   ✅ forecast (weather)
+
+📊 Enhanced Command Loading Complete:
+   ✅ Successfully loaded: 107 commands
+   ❌ Failed to load: 6 commands
+   📂 Categories: 26 categories
+
+❌ Failed Commands Details:
+   • admin.js: Missing command.data property
+   • arena.new.js: Missing command.data property
+   • solve.js: Missing command.data property
+   • solve.js: Missing command.data property
+   • work.js: Duplicate command name: work
+   • train.js: Duplicate command name: train
+============================================================
+🎮 testing102#9723 is now online!
+🏴‍☠️ RPG Treasure Hunt Bot v3.0.1
+🎯 Loaded 107 slash commands
+🌟 Active in 1 servers
+⚔️ Serving 1 adventurers
+============================================================
+🔄 Started refreshing application (/) commands...
+📝 Preparing to register 107 commands
+❌ Error registering commands: Maximum number of application commands reached (100).
+❌ Fallback registration also failed: Maximum number of application commands reached (100).
+🔄 Command cache refreshed
+Error executing command tips: TypeError: db.get is not a function
+    at Object.execute (/home/runner/workspace/commands/utility/tips.js:32:35)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+Command Error in tips: TypeError: db.get is not a function
+    at Object.execute (/home/runner/workspace/commands/utility/tips.js:32:35)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+(node:1163) Warning: Supplying "ephemeral" for interaction response options is deprecated. Utilize flags instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Command validation failed for bazaar: [
+  'Option 0 must have a type',
+  'Option 1 must have a type',
+  'Option 2 must have a type',
+  'Option 3 must have a type'
+]
+Command validation failed for calendar: [
+  'Option 0 must have a type',
+  'Option 1 must have a type',
+  'Option 2 must have a type',
+  'Option 3 must have a type'
+]
+[2025-08-23T07:02:38.045Z] Error in Interaction Error | User: _aq.mr_ | Type: 2: {
+  timestamp: '2025-08-23T07:02:38.045Z',
+  context: 'Interaction Error | User: _aq.mr_ | Type: 2',
+  name: 'TypeError',
+  message: 'db.setPlayer is not a function',
+  code: null,
+  type: null,
+  stack: 'TypeError: db.setPlayer is not a function\n' +
+    '    at Object.execute (/home/runner/workspace/commands/economy/daily.js:91:22)\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:13)\n' +
+    '    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)\n' +
+    '    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)'
+}
+Command validation failed for decorate: [
+  'Option 0 must have a type',
+  'Option 1 must have a type',
+  'Option 2 must have a type'
+]
+Command validation failed for guild: [
+  'Option 0 must have a type',
+  'Option 1 must have a type',
+  'Option 2 must have a type',
+  'Option 3 must have a type',
+  'Option 4 must have a type',
+  'Option 5 must have a type'
+]
+Error executing command forage: TypeError: db.get is not a function
+    at Object.execute (/home/runner/workspace/commands/exploration/forage.js:12:38)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+Command Error in forage: TypeError: db.get is not a function
+    at Object.execute (/home/runner/workspace/commands/exploration/forage.js:12:38)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+Command validation failed for inn: [
+  'Option 0 must have a type',
+  'Option 1 must have a type',
+  'Option 2 must have a type',
+  'Option 3 must have a type',
+  'Option 4 must have a type'
+]
+Error executing command fish: TypeError: Cannot read properties of undefined (reading 'fishingExp')
+    at Object.execute (/home/runner/workspace/commands/exploration/fish.js:94:53)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:13)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+Command Error in fish: TypeError: Cannot read properties of undefined (reading 'fishingExp')
+    at Object.execute (/home/runner/workspace/commands/exploration/fish.js:94:53)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:13)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+Error getting server stats: TypeError: Cannot read properties of undefined (reading 'getGlobalStats')
+    at Object.getServerStats (/home/runner/workspace/commands/admin/manage.js:917:42)
+    at Object.execute (/home/runner/workspace/commands/admin/manage.js:29:38)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+Error executing command map: TypeError: db.get is not a function
+    at Object.execute (/home/runner/workspace/commands/utility/map.js:24:38)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+Command Error in map: TypeError: db.get is not a function
+    at Object.execute (/home/runner/workspace/commands/utility/map.js:24:38)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+Inventory command error: TypeError: Cannot read properties of undefined (reading 'getPlayer')
+    at Object.execute (/home/runner/workspace/commands/economy/inventory.js:34:39)
+    at InteractionHandler.handleSlashCommand (/home/runner/workspace/handlers/interactionHandler.js:320:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async InteractionHandler.handleInteraction (/home/runner/workspace/handlers/interactionHandler.js:217:17)
+    at async Client.<anonymous> (/home/runner/workspace/index.js:391:13)
+Unhandled button action: hunt
+Command validation failed for spots: [
+  'Option 0 must have a type',
+  'Option 1 must have a type',
+  'Option 2 must have a type'
+]

@@ -1,0 +1,145 @@
+🔄 Starting enhanced command loading process...
+   ✅ admin (admin)
+✅ JSON Database initialized successfully
+   ✅ manage (admin)
+   ✅ brew (alchemy)Missing command.data property
+   ✅ potion (alchemy)
+   ✅ transmute (alchemy)
+   ✅ bank (bank)
+   ✅ loan (bank)
+   ✅ transfer (bank)
+   ✅ forge (blacksmith)
+   ✅ repair (blacksmith)
+   ✅ upgrade (blacksmith)
+   ✅ arena (combat)
+⚠️ Skipped arena.new.js: Missing command.data property
+   ✅ tournament (combat)
+   ✅ craft (crafting)
+   ✅ recipes (crafting)
+   ✅ specialize (crafting)
+   ✅ workbench (crafting)
+   ✅ answer (economy)
+   ✅ auction (economy)
+   ✅ buy (economy)
+   ✅ daily (economy)
+   ✅ equip (economy)
+   ✅ inventory (economy)
+   ✅ invest (economy)
+   ✅ profile (economy)
+   ✅ shop (economy)
+⚠️ Skipped solve.js: Missing command.data property
+   ✅ unequip (economy)
+   ✅ work (economy)
+   ✅ dungeon (exploration)
+   ✅ expedition (exploration)
+   ✅ fish (exploration)
+   ✅ forage (exploration)
+   ✅ mine (exploration)
+   ✅ scout (exploration)
+   ✅ farm (farming)
+   ✅ garden (farming)
+   ✅ harvest (farming)
+   ✅ plant (farming)
+   ✅ water (farming)
+   ✅ cast (fishing)
+   ✅ market (fishing)
+   ✅ fishing (fishing)
+   ✅ spots (fishing)
+   ✅ tackle (fishing)
+   ✅ gamble (gambling)
+   ✅ roulette (gambling)
+   ✅ slots (gambling)
+   ✅ challenge (games)
+   ✅ hintvote (games)
+   ✅ hunts (games)
+   ✅ lottery (games)
+   ✅ slotgame (games)
+⚠️ Skipped solve.js: Missing command.data property
+   ✅ backup (general)
+   ✅ help (general)
+   ✅ hunt (general)
+   ✅ invite (general)
+   ✅ leaderboard (general)
+   ✅ ping (general)
+   ✅ riddle (general)
+   ✅ solve (general)
+   ✅ status (general)
+   ✅ treasure (general)
+⚠️ Skipped work.js: Duplicate command name: work
+   ✅ build (housing)
+   ❌ decorate.js: option.setName(...).setDescription(...).setType is not a function
+   ✅ house (housing)
+   ✅ room (housing)
+   ✅ enchant (magic)
+   ✅ research (magic)
+   ✅ spell (magic)
+   ✅ spellcraft (magic)
+   ✅ bazaar (merchant)
+   ✅ caravan (merchant)
+   ✅ marketplace (merchant)
+   ✅ merchant (merchant)
+   ✅ excavate (mining)
+   ✅ tunnel (mining)
+   ✅ pet (pets)
+   ✅ stable (pets)
+   ✅ train (pets)
+   ✅ adventure (quests)
+   ✅ quest (quests)
+   ✅ battle (rpg)
+   ✅ dungeonraid (rpg)
+   ✅ raid (rpg)
+   ✅ mastery (skills)
+   ✅ profession (skills)
+⚠️ Skipped train.js: Duplicate command name: train
+   ✅ achievements (social)
+   ✅ guild (social)
+   ✅ party (social)
+   ✅ rankings (social)
+   ✅ drink (tavern)
+   ❌ inn.js: Unexpected token '=>'
+   ✅ socialize (tavern)
+   ✅ mount (transportation)
+   ✅ travel (transportation)
+   ✅ voyage (transportation)
+   ✅ calendar (utility)
+   ✅ convert (utility)
+   ✅ info (utility)
+   ✅ map (utility)
+   ✅ settings (utility)
+   ✅ stats (utility)
+   ✅ tips (utility)
+   ✅ vote (utility)
+   ✅ alert (weather)
+   ✅ weather (weather)
+   ✅ forecast (weather)
+
+📊 Enhanced Command Loading Complete:
+   ✅ Successfully loaded: 105 commands
+   ❌ Failed to load: 8 commands
+   📂 Categories: 26 categories
+
+❌ Failed Commands Details:
+   • admin.js: Missing command.data property
+   • arena.new.js: Missing command.data property
+   • solve.js: Missing command.data property
+   • solve.js: Missing command.data property
+   • work.js: Duplicate command name: work
+   • decorate.js: option.setName(...).setDescription(...).setType is not a function
+   • train.js: Duplicate command name: train
+   • inn.js: Unexpected token '=>'
+============================================================
+🎮 testing102#9723 is now online!
+🏴‍☠️ RPG Treasure Hunt Bot v3.0.1
+🎯 Loaded 105 slash commands
+🌟 Active in 1 servers
+⚔️ Serving 1 adventurers
+============================================================
+🔄 Started refreshing application (/) commands...
+📝 Preparing to register 105 commands
+❌ Error registering commands: Maximum number of application commands reached (100).
+❌ Fallback registration also failed: Maximum number of application commands reached (100).
+🔄 Command cache refreshed
+No handler found for select menu: map_location_select with value: village_square
+(node:2014) Warning: Supplying "ephemeral" for interaction response options is deprecated. Utilize flags instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Unhandled button action: map
