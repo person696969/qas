@@ -1,0 +1,88 @@
+{
+  "users": {
+    "952076703910481921": {
+      "id": "952076703910481921",
+      "coins": 206,
+      "level": 1,
+      "experience": 0,
+      "health": 100,
+      "maxHealth": 100,
+      "mana": 100,
+      "maxMana": 100,
+      "strength": 10,
+      "defense": 10,
+      "agility": 10,
+      "intelligence": 10,
+      "inventory": {
+        "items": [],
+        "equipment": {
+          "weapon": null,
+          "armor": null,
+          "accessory": null
+        },
+        "coins": 100
+      },
+      "skills": {
+        "mining": 1,
+        "fishing": 1,
+        "farming": 1,
+        "combat": 1,
+        "magic": 1,
+        "crafting": 1
+      },
+      "skillExperience": {
+        "mining": 0,
+        "fishing": 0,
+        "farming": 0,
+        "combat": 0,
+        "magic": 0,
+        "crafting": 0
+      },
+      "achievements": [],
+      "pets": [],
+      "house": {
+        "rooms": [
+          "living_room"
+        ],
+        "decorations": [],
+        "level": 1
+      },
+      "bank": {
+        "savings": 0,
+        "investments": []
+      },
+      "buffs": [],
+      "dailyStreak": {
+        "count": 1,
+        "lastClaim": 1755945916665
+      },
+      "lastDaily": null,
+      "totalDailyClaims": 0,
+      "statistics": {
+        "commandsUsed": 0,
+        "itemsCrafted": 0,
+        "monstersDefeated": 0,
+        "fishCaught": 0,
+        "oresMined": 0,
+        "biggestFish": "None"
+      },
+      "location": "village",
+      "lastSeen": 1755945916665,
+      "createdAt": 1755932528930,
+      "stats": {
+        "streak": 0,
+        "totalEarned": 100
+      },
+      "settings": {
+        "notifications": false
+      }
+    }
+  },
+  "guilds": {},
+  "settings": {},
+  "globalStats": {
+    "totalUsers": 1,
+    "totalCommands": 0,
+    "totalInteractions": 0
+  }
+}

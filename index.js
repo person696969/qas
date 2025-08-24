@@ -1,8 +1,6 @@
-const { Client, Collection, GatewayIntentBits, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, REST, Routes, EmbedBuilder, ActivityType } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const { initializeDatabase } = require('./utils/dbInit');
-require('dotenv').config();
 
 // Safe config loading with error handling
 let config;
@@ -61,10 +59,6 @@ function validateEnvironment() {
         }
     }
 }
-
-// Initialize database first
-console.log('🔧 Initializing treasure hunting database...');
-initializeDatabase();
 
 // Create a new client instance with enhanced intents
 const client = new Client({
@@ -258,33 +252,15 @@ function loadCommandsFallback(dir, categoryMap = new Map()) {
 const commandsPath = path.join(__dirname, 'commands');
 loadCommands(commandsPath);
 
-// Enhanced ready event with treasure hunting theme
+// Enhanced ready event
 client.once('ready', async () => {
-    console.log(`🏴‍☠️ Treasure Hunt Bot Ready! Logged in as ${client.user.tag}`);
-    console.log(`🗺️ Serving ${client.guilds.cache.size} servers with ${client.users.cache.size} treasure hunters!`);
-
-    // Set bot status with treasure hunting theme
-    const activities = [
-        { name: '🗺️ for hidden treasures', type: ActivityType.Watching },
-        { name: '⚔️ epic battles', type: ActivityType.Competing },
-        { name: '💎 treasure hunts | /help', type: ActivityType.Playing },
-        { name: '🏴‍☠️ legendary adventures', type: ActivityType.Playing }
-    ];
-
-    let activityIndex = 0;
-
-    // Rotate activities every 30 seconds
-    setInterval(() => {
-        client.user.setActivity(activities[activityIndex]);
-        activityIndex = (activityIndex + 1) % activities.length;
-    }, 30000);
-
-    // Set initial activity
-    client.user.setActivity(activities[0]);
-    client.user.setStatus('online');
-
-    console.log('🎮 Bot status set to treasure hunting theme!');
-    console.log('📊 All systems operational - Ready for treasure hunting adventures!');
+    console.log('='.repeat(60));
+    console.log(`🎮 ${client.user.tag} is now online!`);
+    console.log(`🏴‍☠️ RPG Treasure Hunt Bot v${config.version || '3.0.0'}`);
+    console.log(`🎯 Loaded ${client.commands.size} slash commands`);
+    console.log(`🌟 Active in ${client.guilds.cache.size} servers`);
+    console.log(`⚔️ Serving ${client.users.cache.size} adventurers`);
+    console.log('='.repeat(60));
 
     // Register slash commands with enhanced syncing
     if (client.commands.size > 0) {
@@ -304,6 +280,26 @@ client.once('ready', async () => {
             console.error('❌ Failed to refresh command cache:', error.message);
         }
     }, 5000);
+
+    // Set bot status with gaming theme
+    const activities = [
+        { name: 'Epic Treasure Hunts', type: ActivityType.Playing },
+        { name: 'RPG Adventures', type: ActivityType.Playing },
+        { name: 'for /hunt commands', type: ActivityType.Listening },
+        { name: 'Dungeon Raids', type: ActivityType.Competing },
+        { name: 'Treasure Maps', type: ActivityType.Watching }
+    ];
+
+    let activityIndex = 0;
+
+    // Set initial activity
+    client.user.setActivity(activities[activityIndex]);
+
+    // Rotate activities every 30 seconds
+    setInterval(() => {
+        activityIndex = (activityIndex + 1) % activities.length;
+        client.user.setActivity(activities[activityIndex]);
+    }, 30000);
 });
 
 // Enhanced command registration function
@@ -331,6 +327,12 @@ async function registerCommands() {
     try {
         console.log('🔄 Started refreshing application (/) commands...');
         console.log(`📝 Preparing to register ${commands.length} commands`);
+
+        // Check command limit (Discord allows max 100 global commands)
+        if (commands.length > 100) {
+            console.warn(`⚠️ Warning: ${commands.length} commands exceed Discord's limit of 100. Using first 100 commands.`);
+            commands.splice(100); // Keep only first 100 commands
+        }
 
         // Register commands globally (takes up to 1 hour to sync)
         await rest.put(
@@ -388,14 +390,27 @@ if (InteractionHandler) {
     }
 }
 
-// Handle all interactions
+// Handle all interactions with enhanced error handling
 client.on('interactionCreate', async (interaction) => {
     try {
-        if (interactionHandler) {
-            await interactionHandler.handleInteraction(interaction);
+        // Use interaction fixer for enhanced reliability
+        const InteractionFixer = safeRequire('./utils/interactionFixer.js');
+        
+        if (InteractionFixer?.fixInteraction) {
+            await InteractionFixer.fixInteraction(interaction, async (fixedInteraction) => {
+                if (interactionHandler) {
+                    await interactionHandler.handleInteraction(fixedInteraction);
+                } else {
+                    await handleInteractionFallback(fixedInteraction);
+                }
+            });
         } else {
-            // Fallback interaction handling
-            await handleInteractionFallback(interaction);
+            // Fallback to original handling
+            if (interactionHandler) {
+                await interactionHandler.handleInteraction(interaction);
+            } else {
+                await handleInteractionFallback(interaction);
+            }
         }
     } catch (error) {
         console.error('Critical interaction error:', error);
@@ -427,7 +442,7 @@ async function handleInteractionFallback(interaction) {
     } else if (interaction.isButton()) {
         await interaction.reply({
             content: '⚠️ Button interactions are not fully implemented yet.',
-            ephemeral: true
+            flags: { ephemeral: true }
         });
     }
 }
@@ -435,17 +450,14 @@ async function handleInteractionFallback(interaction) {
 // Enhanced error handling for interactions
 async function handleInteractionError(interaction, error) {
     try {
-        const errorMessage = {
-            content: '❌ An error occurred while processing your request. Please try again.',
-            ephemeral: true
-        };
+        const errorMessage = '❌ An error occurred while processing your request. Please try again.';
 
         if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply(errorMessage);
+            await interaction.reply({ content: errorMessage, flags: { ephemeral: true } });
         } else if (interaction.deferred) {
-            await interaction.editReply(errorMessage);
+            await interaction.editReply({ content: errorMessage, flags: { ephemeral: true } });
         } else {
-            await interaction.followUp(errorMessage);
+            await interaction.followUp({ content: errorMessage, flags: { ephemeral: true } });
         }
     } catch (e) {
         console.error('Failed to send error message:', e.message);
@@ -458,7 +470,7 @@ async function handleSelectMenuInteraction(interaction) {
         if (!interaction.values || interaction.values.length === 0) {
             await interaction.reply({
                 content: '❌ No selection made.',
-                ephemeral: true
+                flags: 64 // MessageFlags.Ephemeral
             });
             return;
         }
@@ -490,7 +502,11 @@ async function handleSelectMenuInteraction(interaction) {
             'excavate': 'excavate',
             'fish': 'fish',
             'gamble': 'gamble',
-            'arena': 'arena'
+            'arena': 'arena',
+            'village': 'travel',
+            'forest': 'travel',
+            'mountain': 'travel',
+            'beach': 'travel'
         };
 
         const commandName = commandMap[action];
@@ -500,11 +516,18 @@ async function handleSelectMenuInteraction(interaction) {
             await command.handleSelectMenu(interaction, args.join('_'));
         } else if (command && action === 'help' && command.showCategoryHelp) {
             await command.showCategoryHelp(interaction, args[0]);
+        } else if (action === 'village' || action === 'forest' || action === 'mountain' || action === 'beach' || interaction.values[0].includes('village_square')) {
+            // Handle map location selections
+            const location = interaction.values[0].replace('_', ' ');
+            await interaction.reply({
+                content: `🗺️ You travel to the ${location}. ${action === 'village' ? 'You see shops and NPCs.' : action === 'forest' ? 'Wild creatures roam here.' : action === 'mountain' ? 'Rich mining deposits await.' : 'Calm waters perfect for fishing.'}`,
+                ephemeral: true
+            });
         } else {
             // Generic fallback response
             await interaction.reply({
                 content: `✅ Selection processed: ${action}${args.length > 0 ? ` - ${args.join(' ')}` : ''}`,
-                ephemeral: true
+                flags: 64
             });
         }
     } catch (error) {
@@ -517,7 +540,7 @@ async function handleSelectMenuInteraction(interaction) {
         } else {
             await interaction.reply({
                 content: '❌ An error occurred processing your selection.',
-                ephemeral: true
+                flags: 64
             });
         }
     }

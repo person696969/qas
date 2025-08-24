@@ -14,129 +14,17 @@ if (missingVars.length > 0) {
 }
 
 module.exports = {
-    // Bot configuration
-    prefix: 'v!',
-    version: '3.0.0',
-
-    // Discord configuration
-    clientId: process.env.DISCORD_CLIENT_ID,
-    guildId: process.env.DISCORD_GUILD_ID, // Optional: for guild-specific commands
-
-    // Colors for embeds
-    colors: {
-        primary: '#3498db',
-        success: '#2ecc71',
-        error: '#e74c3c',
-        warning: '#f39c12',
-        info: '#9b59b6',
-        treasure: '#FFD700',
-        magic: '#9932CC',
-        economy: '#32CD32',
-        profile: '#FF69B4',
-        hunt: '#FF6347',
-        dragon: '#8B0000',
-        gem: '#40E0D0',
-        dungeon: '#2F4F4F'
-    },
-
-    // Economy settings
-    economy: {
-        dailyReward: 100,
-        workReward: { min: 50, max: 150 },
-        startingCoins: 500,
-        treasureFindBonus: 250,
-        rareItemSellValue: 1000
-    },
-
-    // Treasure Hunt settings
-    huntSettings: {
-        baseReward: 100,
-        difficultyRange: '1-10',
-        cooldown: 5, // minutes
-        maxDaily: 10,
-        treasureMultiplier: 2.0,
-        rareBonusMultiplier: 3.0,
-        legendaryBonusMultiplier: 5.0,
-        rewardMultiplier: {
-            easy: 1.0,
-            medium: 1.5,
-            hard: 2.0,
-            expert: 2.5,
-            legendary: 3.0
-        },
-        successRates: {
-            easy: 90,
-            medium: 75,
-            hard: 60,
-            expert: 45,
-            legendary: 30
-        }
-    },
-
-    // RPG Combat settings
-    combat: {
-        baseHealth: 100,
-        maxLevel: 100,
-        expMultiplier: 1.2,
-        battleReward: { min: 75, max: 200 },
-        dragonEncounterChance: 5, // percentage
-        bossRewardMultiplier: 3.0
-    },
-
-    // Feature flags
-    features: {
-        treasureHunts: true,
-        economy: true,
-        leaderboards: true,
-        achievements: true,
-        battles: true,
-        guilds: true,
-        trading: true,
-        crafting: true,
-        exploration: true,
-        pets: true,
-        housing: true,
-        magic: true,
-        dungeons: true,
-        dragons: true,
-        rareTreasures: true
-    },
-
-    // Security settings
-    security: {
-        enableRateLimiting: true,
-        maxCommandsPerMinute: 20,
-        adminUsers: [], // Add admin user IDs here
-        maintenanceMode: false,
-        autoBackup: true,
-        enableMaintenanceMode: false
-    },
-
-    // Development settings
-    development: {
-        debugMode: false,
-        testMode: false,
-        verboseLogging: false
-    },
-
-    // Error handling
-    errorHandling: {
-        enableAutoRestart: true,
-        maxRetries: 3,
-        logErrors: true
-    },
-
-    // Load environment variables for other configurations
+    // Discord Configuration
     token: process.env.DISCORD_BOT_TOKEN,
     clientId: process.env.DISCORD_CLIENT_ID,
     prefix: process.env.BOT_PREFIX || 'v!',
-
+    
     // Game Configuration
     economy: {
         dailyReward: parseInt(process.env.DAILY_REWARD) || 500,
-        workReward: {
-            min: parseInt(process.env.WORK_REWARD_MIN) || 100,
-            max: parseInt(process.env.WORK_REWARD_MAX) || 300
+        workReward: { 
+            min: parseInt(process.env.WORK_REWARD_MIN) || 100, 
+            max: parseInt(process.env.WORK_REWARD_MAX) || 300 
         },
         itemPrices: {
             'Magic Compass': 1000,
@@ -151,7 +39,7 @@ module.exports = {
             'Mystic Scroll': 750
         }
     },
-
+    
     // Clue System Configuration
     clueRewards: {
         easy: 100,
@@ -160,14 +48,14 @@ module.exports = {
         expert: 1000,
         legendary: 2500
     },
-
+    
     // Performance & Rate Limiting
     commandCooldown: parseInt(process.env.COMMAND_COOLDOWN) || 3000, // 3 seconds
     huntCooldown: parseInt(process.env.HUNT_COOLDOWN) || 300000, // 5 minutes
     dailyCooldown: parseInt(process.env.DAILY_COOLDOWN) || 86400000, // 24 hours
     workCooldown: parseInt(process.env.WORK_COOLDOWN) || 3600000, // 1 hour
     battleCooldown: parseInt(process.env.BATTLE_COOLDOWN) || 600000, // 10 minutes
-
+    
     // Database Configuration (if using a database)
     database: {
         type: process.env.DB_TYPE || 'json', // 'json', 'sqlite', 'mysql', 'postgres'
@@ -178,7 +66,7 @@ module.exports = {
         database: process.env.DB_NAME || 'treasure_hunt_bot',
         filename: process.env.DB_FILE || './data/database.json'
     },
-
+    
     // UI/UX Configuration
     embedColors: {
         success: parseInt(process.env.COLOR_SUCCESS, 16) || 0x00FF00,
@@ -195,7 +83,7 @@ module.exports = {
         battle: parseInt(process.env.COLOR_BATTLE, 16) || 0xDC143C,
         magic: parseInt(process.env.COLOR_MAGIC, 16) || 0x8A2BE2
     },
-
+    
     // Game Features (can be toggled via environment variables)
     features: {
         economy: (process.env.FEATURE_ECONOMY !== 'false'),
@@ -211,14 +99,14 @@ module.exports = {
         crafting: (process.env.FEATURE_CRAFTING !== 'false'),
         housing: (process.env.FEATURE_HOUSING !== 'false')
     },
-
+    
     // Bot Metadata
     version: process.env.BOT_VERSION || '3.0.1',
     description: process.env.BOT_DESCRIPTION || 'Advanced Discord Treasure Hunt & RPG Gaming Bot',
     author: process.env.BOT_AUTHOR || 'Enhanced Gaming Bot',
     support_server: process.env.SUPPORT_SERVER || '',
     website: process.env.BOT_WEBSITE || '',
-
+    
     // Game Emojis (can be customized via environment variables)
     emojis: {
         coin: process.env.EMOJI_COIN || '🪙',
@@ -242,7 +130,7 @@ module.exports = {
         exp: process.env.EMOJI_EXP || '🌟',
         level: process.env.EMOJI_LEVEL || '🎯'
     },
-
+    
     // Logging Configuration
     logging: {
         level: process.env.LOG_LEVEL || 'info', // 'error', 'warn', 'info', 'debug'
@@ -250,7 +138,7 @@ module.exports = {
         console: (process.env.LOG_CONSOLE !== 'false'),
         timestamp: (process.env.LOG_TIMESTAMP !== 'false')
     },
-
+    
     // Game Balance Configuration
     gameBalance: {
         maxLevel: parseInt(process.env.MAX_LEVEL) || 100,
@@ -264,7 +152,7 @@ module.exports = {
             'Basic Health Potion'
         ]
     },
-
+    
     // Hunt Configuration
     huntSettings: {
         maxAttempts: parseInt(process.env.HUNT_MAX_ATTEMPTS) || 3,
@@ -284,7 +172,7 @@ module.exports = {
             legendary: 5.0
         }
     },
-
+    
     // Battle System Configuration
     battleSettings: {
         maxTurns: parseInt(process.env.BATTLE_MAX_TURNS) || 20,
@@ -293,7 +181,7 @@ module.exports = {
         escapeChance: parseFloat(process.env.BATTLE_ESCAPE_CHANCE) || 0.3,
         expRewardMultiplier: parseFloat(process.env.BATTLE_EXP_MULTIPLIER) || 1.2
     },
-
+    
     // Shop Configuration
     shopSettings: {
         dailyItemRotation: (process.env.SHOP_DAILY_ROTATION !== 'false'),
@@ -301,7 +189,7 @@ module.exports = {
         maxDiscountPercent: parseInt(process.env.SHOP_MAX_DISCOUNT) || 25,
         specialItemChance: parseFloat(process.env.SHOP_SPECIAL_CHANCE) || 0.05
     },
-
+    
     // Achievement Configuration
     achievements: {
         huntMilestones: [1, 5, 10, 25, 50, 100, 250, 500, 1000],
@@ -309,7 +197,7 @@ module.exports = {
         levelMilestones: [5, 10, 25, 50, 75, 100],
         battleMilestones: [1, 10, 25, 50, 100, 250, 500]
     },
-
+    
     // Security Configuration
     security: {
         maxCommandsPerMinute: parseInt(process.env.MAX_COMMANDS_PER_MINUTE) || 20,
@@ -318,7 +206,7 @@ module.exports = {
         moderatorRoles: process.env.MODERATOR_ROLES ? process.env.MODERATOR_ROLES.split(',') : [],
         enableMaintenanceMode: (process.env.MAINTENANCE_MODE === 'true')
     },
-
+    
     // Error Handling Configuration
     errorHandling: {
         enableDetailedErrors: (process.env.DETAILED_ERRORS === 'true'),
@@ -326,7 +214,7 @@ module.exports = {
         enableAutoRestart: (process.env.AUTO_RESTART !== 'false'),
         maxRestartAttempts: parseInt(process.env.MAX_RESTART_ATTEMPTS) || 3
     },
-
+    
     // Performance Configuration
     performance: {
         cacheTimeout: parseInt(process.env.CACHE_TIMEOUT) || 300000, // 5 minutes
@@ -334,14 +222,14 @@ module.exports = {
         enableCompression: (process.env.ENABLE_COMPRESSION !== 'false'),
         maxMemoryUsage: parseInt(process.env.MAX_MEMORY_MB) || 512
     },
-
+    
     // Localization Configuration
     localization: {
         defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en',
         enableTranslation: (process.env.ENABLE_TRANSLATION === 'true'),
         supportedLanguages: process.env.SUPPORTED_LANGUAGES ? process.env.SUPPORTED_LANGUAGES.split(',') : ['en']
     },
-
+    
     // Development Configuration
     development: {
         debugMode: (process.env.DEBUG_MODE === 'true'),
@@ -349,50 +237,50 @@ module.exports = {
         testGuildId: process.env.TEST_GUILD_ID || '',
         enableHotReload: (process.env.ENABLE_HOT_RELOAD === 'true')
     },
-
+    
     // Validation function to check configuration
     validate() {
         const errors = [];
-
+        
         // Check required fields
         if (!this.token) errors.push('DISCORD_BOT_TOKEN is required');
         if (!this.clientId) errors.push('DISCORD_CLIENT_ID is required');
-
+        
         // Check numeric values
         if (this.commandCooldown < 0) errors.push('COMMAND_COOLDOWN must be positive');
         if (this.huntCooldown < 0) errors.push('HUNT_COOLDOWN must be positive');
-
+        
         // Check color values
         Object.entries(this.embedColors).forEach(([key, value]) => {
             if (typeof value !== 'number' || value < 0 || value > 0xFFFFFF) {
                 errors.push(`Invalid color value for ${key}: ${value}`);
             }
         });
-
+        
         // Check percentages
         if (this.huntSettings.baseSuccessRate < 0 || this.huntSettings.baseSuccessRate > 1) {
             errors.push('HUNT_SUCCESS_RATE must be between 0 and 1');
         }
-
+        
         if (errors.length > 0) {
             console.error('❌ Configuration validation failed:');
             errors.forEach(error => console.error(`   - ${error}`));
             return false;
         }
-
+        
         return true;
     },
-
+    
     // Helper function to get feature status
     isFeatureEnabled(featureName) {
         return this.features[featureName] === true;
     },
-
+    
     // Helper function to get embed color
     getEmbedColor(type) {
         return this.embedColors[type] || this.embedColors.info;
     },
-
+    
     // Helper function to get emoji
     getEmoji(type) {
         return this.emojis[type] || '❓';

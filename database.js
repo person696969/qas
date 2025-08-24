@@ -1,3 +1,4 @@
+
 // Enhanced Database Module with Better Error Handling and Performance
 const fs = require('fs');
 const path = require('path');
@@ -47,13 +48,13 @@ class SimpleDatabase {
 
     saveData() {
         if (this.isLoading) return;
-
+        
         try {
             // Debounce saves to prevent excessive writes
             if (this.saveTimeout) {
                 clearTimeout(this.saveTimeout);
             }
-
+            
             this.saveTimeout = setTimeout(() => {
                 fs.writeFileSync(this.dataPath, JSON.stringify(this.data, null, 2));
                 this.saveTimeout = null;
@@ -97,7 +98,7 @@ class SimpleDatabase {
 
     deepMerge(target, source) {
         const result = { ...target };
-
+        
         for (const key in source) {
             if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
                 result[key] = this.deepMerge(result[key] || {}, source[key]);
@@ -105,7 +106,7 @@ class SimpleDatabase {
                 result[key] = source[key];
             }
         }
-
+        
         return result;
     }
 
@@ -214,7 +215,7 @@ class SimpleDatabase {
             if (!this.data.guilds[guildId]) {
                 await this.getGuild(guildId); // Create if doesn't exist
             }
-
+            
             this.data.guilds[guildId] = this.deepMerge(this.data.guilds[guildId], updateData);
             this.saveData();
             return true;
@@ -224,129 +225,26 @@ class SimpleDatabase {
         }
     }
 
-    // Get global statistics
     async getGlobalStats() {
+        return { ...this.data.globalStats };
+    }
+
+    async updateGlobalStats(stats) {
         try {
-            const players = this.db.all(`SELECT * FROM players`);
-            const totalPlayers = players.length;
-            const totalCoins = players.reduce((sum, player) => sum + (player.coins || 0), 0);
-            const averageCoins = totalPlayers > 0 ? Math.floor(totalCoins / totalPlayers) : 0;
-            const totalHunts = players.reduce((sum, player) => sum + (player.hunts_completed || 0), 0);
-            const averageLevel = totalPlayers > 0 ? players.reduce((sum, player) => sum + (player.level || 1), 0) / totalPlayers : 1;
-            const totalTreasuresFound = players.reduce((sum, player) => sum + (player.treasures_found || 0), 0);
-            const totalBattlesWon = players.reduce((sum, player) => sum + (player.battles_won || 0), 0);
-
-            return {
-                totalPlayers,
-                totalCoins,
-                averageCoins,
-                totalHunts,
-                averageLevel,
-                topLevel: Math.max(...players.map(p => p.level || 1), 1),
-                totalTreasuresFound,
-                totalBattlesWon
-            };
+            this.data.globalStats = { ...this.data.globalStats, ...stats };
+            this.saveData();
+            return true;
         } catch (error) {
-            console.error('Error getting global stats:', error);
-            return {
-                totalPlayers: 0,
-                totalCoins: 0,
-                averageCoins: 0,
-                totalHunts: 0,
-                averageLevel: 1,
-                topLevel: 1,
-                totalTreasuresFound: 0,
-                totalBattlesWon: 0
-            };
+            console.error('Error updating global stats:', error);
+            return false;
         }
-    },
-
-    // Treasure hunting specific methods
-    async startTreasureHunt(userId, difficulty = 'medium') {
-        try {
-            const player = await this.getPlayer(userId);
-            const huntId = `hunt_${userId}_${Date.now()}`;
-
-            // Create hunt record
-            this.db.run(`INSERT OR REPLACE INTO active_hunts (hunt_id, user_id, difficulty, start_time, status) 
-                         VALUES (?, ?, ?, ?, ?)`, 
-                         [huntId, userId, difficulty, Date.now(), 'active']);
-
-            return {
-                huntId,
-                difficulty,
-                startTime: Date.now(),
-                expectedDuration: this.getHuntDuration(difficulty)
-            };
-        } catch (error) {
-            console.error('Error starting treasure hunt:', error);
-            return null;
-        }
-    },
-
-    async completeTreasureHunt(huntId, success = false, treasureValue = 0) {
-        try {
-            const hunt = this.db.get(`SELECT * FROM active_hunts WHERE hunt_id = ?`, [huntId]);
-            if (!hunt) return null;
-
-            // Update hunt status
-            this.db.run(`UPDATE active_hunts SET status = ?, end_time = ?, success = ?, treasure_value = ? 
-                         WHERE hunt_id = ?`, 
-                         [success ? 'completed' : 'failed', Date.now(), success ? 1 : 0, treasureValue, huntId]);
-
-            // Update player stats if successful
-            if (success) {
-                const player = await this.getPlayer(hunt.user_id);
-                const newCoins = player.coins + treasureValue;
-                const newTreasures = (player.treasures_found || 0) + 1;
-                const newHunts = (player.hunts_completed || 0) + 1;
-
-                this.db.run(`UPDATE players SET coins = ?, treasures_found = ?, hunts_completed = ? WHERE userId = ?`,
-                            [newCoins, newTreasures, newHunts, hunt.user_id]);
-            }
-
-            return { success, treasureValue, huntId };
-        } catch (error) {
-            console.error('Error completing treasure hunt:', error);
-            return null;
-        }
-    },
-
-    async getActiveHunt(userId) {
-        try {
-            return this.db.get(`SELECT * FROM active_hunts WHERE user_id = ? AND status = 'active'`, [userId]);
-        } catch (error) {
-            console.error('Error getting active hunt:', error);
-            return null;
-        }
-    },
-
-    async getAllEvents() {
-        try {
-            return this.db.all(`SELECT * FROM events WHERE active = 1`) || [];
-        } catch (error) {
-            console.error('Error getting events:', error);
-            return [];
-        }
-    },
-
-    getHuntDuration(difficulty) {
-        const durations = {
-            easy: 2 * 60 * 1000,      // 2 minutes
-            medium: 5 * 60 * 1000,    // 5 minutes
-            hard: 10 * 60 * 1000,     // 10 minutes
-            expert: 15 * 60 * 1000,   // 15 minutes
-            legendary: 30 * 60 * 1000 // 30 minutes
-        };
-        return durations[difficulty] || durations.medium;
-    },
-
+    }
 
     async getLeaderboard(type = 'level', limit = 10) {
         try {
             const users = Object.values(this.data.users);
             let sortKey = 'level';
-
+            
             switch (type) {
                 case 'coins':
                     sortKey = 'coins';
@@ -359,7 +257,7 @@ class SimpleDatabase {
                     sortKey = 'level';
                     break;
             }
-
+            
             return users
                 .sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0))
                 .slice(0, limit)
@@ -371,6 +269,14 @@ class SimpleDatabase {
         } catch (error) {
             console.error('Error getting leaderboard:', error);
             return [];
+        }
+    }
+
+    // Cleanup methods
+    async cleanup() {
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+            this.saveData();
         }
     }
 }
@@ -420,4 +326,4 @@ process.on('SIGTERM', async () => {
     }
 });
 
-module.exports = { db };
+module.exports = db;
