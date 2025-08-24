@@ -1,512 +1,299 @@
-
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const config = require('../../config.js');
 const db = require('../../database.js');
-
-const gamblingGames = {
-    slots: {
-        name: '🎰 Slot Machine',
-        description: 'Classic three-reel slot machine',
-        minBet: 10,
-        maxBet: 5000,
-        symbols: ['🍒', '🍋', '🍊', '🍇', '💎', '7️⃣', '⭐', '🔔'],
-        payouts: {
-            three_match: { '💎': 50, '7️⃣': 25, '⭐': 15, '🔔': 12, '🍇': 10, '🍊': 8, '🍋': 6, '🍒': 5 },
-            two_match: 2
-        }
-    },
-    dice: {
-        name: '🎲 Dice Battle',
-        description: 'Roll dice against the house',
-        minBet: 5,
-        maxBet: 2000,
-        modes: ['single', 'double', 'triple']
-    },
-    coinflip: {
-        name: '🪙 Coin Flip',
-        description: 'Call heads or tails',
-        minBet: 1,
-        maxBet: 1000,
-        payout: 2
-    },
-    blackjack: {
-        name: '🃏 Blackjack',
-        description: 'Beat the dealer to 21',
-        minBet: 25,
-        maxBet: 3000,
-        payouts: { blackjack: 2.5, win: 2, push: 1 }
-    },
-    roulette: {
-        name: '🎡 Roulette',
-        description: 'European roulette wheel',
-        minBet: 10,
-        maxBet: 2500,
-        payouts: { single: 36, color: 2, even_odd: 2, dozen: 3 }
-    }
-};
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('gamble')
-        .setDescription('🎰 Access the premium gambling suite!')
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('play')
-                .setDescription('Play a gambling game')
-                .addStringOption(option =>
-                    option.setName('game')
-                        .setDescription('Choose your game')
-                        .setRequired(true)
-                        .addChoices(
-                            { name: '🎰 Slot Machine', value: 'slots' },
-                            { name: '🎲 Dice Battle', value: 'dice' },
-                            { name: '🪙 Coin Flip', value: 'coinflip' },
-                            { name: '🃏 Blackjack', value: 'blackjack' },
-                            { name: '🎡 Roulette', value: 'roulette' }
-                        ))
-                .addIntegerOption(option =>
-                    option.setName('bet')
-                        .setDescription('Amount to bet')
-                        .setRequired(true)
-                        .setMinValue(1)
-                        .setMaxValue(10000)))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('stats')
-                .setDescription('View your gambling statistics'))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('leaderboard')
-                .setDescription('View top gamblers'))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('settings')
-                .setDescription('Configure gambling preferences')),
-
+        .setDescription('🎰 Try your luck with various gambling games!')
+        .addStringOption(option =>
+            option.setName('game')
+                .setDescription('Choose gambling game')
+                .setRequired(false)
+                .addChoices(
+                    { name: '🎰 Slot Machine', value: 'slots' },
+                    { name: '🎲 Dice Roll', value: 'dice' },
+                    { name: '🃏 Blackjack', value: 'blackjack' },
+                    { name: '🎯 Coin Flip', value: 'coinflip' },
+                    { name: '🎡 Roulette', value: 'roulette' }
+                ))
+        .addIntegerOption(option =>
+            option.setName('bet')
+                .setDescription('Amount to bet (minimum 10 coins)')
+                .setRequired(false)
+                .setMinValue(10)
+                .setMaxValue(10000)),
+    
     async execute(interaction) {
-        const subcommand = interaction.options.getSubcommand();
+        const game = interaction.options?.getString('game') || 'slots';
+        const bet = interaction.options?.getInteger('bet') || 50;
         const userId = interaction.user.id;
-
-        try {
-            const player = await db.getPlayer(userId) || {
-                coins: 100,
-                gambling: {
-                    totalBet: 0,
-                    totalWon: 0,
-                    gamesPlayed: 0,
-                    biggestWin: 0,
-                    winStreak: 0,
-                    bestStreak: 0,
-                    preferences: {
-                        autoPlay: false,
-                        quickBet: false,
-                        riskLevel: 'medium'
-                    }
-                }
-            };
-
-            if (subcommand === 'play') {
-                const game = interaction.options.getString('game');
-                const bet = interaction.options.getInteger('bet');
-                
-                await this.playGame(interaction, game, bet, player);
-                
-            } else if (subcommand === 'stats') {
-                await this.showStats(interaction, player);
-                
-            } else if (subcommand === 'leaderboard') {
-                await this.showLeaderboard(interaction);
-                
-            } else if (subcommand === 'settings') {
-                await this.showSettings(interaction, player);
-            }
-
-        } catch (error) {
-            console.error('Error in gamble command:', error);
-            await interaction.reply({
-                content: '❌ An error occurred while gambling.',
-                ephemeral: true
-            });
-        }
-    },
-
-    async playGame(interaction, gameType, bet, player) {
-        const game = gamblingGames[gameType];
         
-        if (!game) {
-            return interaction.reply({
-                content: '❌ Invalid game type!',
-                ephemeral: true
-            });
-        }
-
-        if (bet < game.minBet || bet > game.maxBet) {
-            return interaction.reply({
-                content: `❌ Bet must be between ${game.minBet} and ${game.maxBet} coins!`,
-                ephemeral: true
-            });
-        }
-
-        if (player.coins < bet) {
-            return interaction.reply({
-                content: `❌ You don't have enough coins! You need ${bet} coins.`,
-                ephemeral: true
-            });
-        }
-
-        await interaction.deferReply();
-
-        // Play the game
-        const result = await this.executeGame(gameType, bet, player);
+        const userData = await db.getPlayer(userId) || { inventory: { coins: 0 } };
+        const coins = userData.inventory?.coins || 0;
         
-        // Update player stats
+        // Check if user has enough coins
+        if (coins < bet) {
+            return interaction.reply({
+                content: `❌ You need ${bet} coins to play! You have ${coins} coins. Use \`/daily\` to earn more coins.`,
+                ephemeral: true
+            });
+        }
+        
+        // Check cooldown
+        const lastGamble = userData.cooldowns?.gambling || 0;
+        const cooldownTime = 10000; // 10 seconds
+        const timeSinceLastGamble = Date.now() - lastGamble;
+        
+        if (timeSinceLastGamble < cooldownTime) {
+            const timeLeft = Math.ceil((cooldownTime - timeSinceLastGamble) / 1000);
+            return interaction.reply({
+                content: `🎰 Slow down! Wait ${timeLeft} seconds before gambling again.`,
+                ephemeral: true
+            });
+        }
+        
+        // Play the selected game
+        let result;
+        switch (game) {
+            case 'slots':
+                result = this.playSlots(bet);
+                break;
+            case 'dice':
+                result = this.playDice(bet);
+                break;
+            case 'blackjack':
+                result = this.playBlackjack(bet);
+                break;
+            case 'coinflip':
+                result = this.playCoinFlip(bet);
+                break;
+            case 'roulette':
+                result = this.playRoulette(bet);
+                break;
+            default:
+                result = this.playSlots(bet);
+        }
+        
+        // Update user data
         const netGain = result.winnings - bet;
-        player.coins += netGain;
+        userData.inventory.coins = coins + netGain;
+        userData.cooldowns = userData.cooldowns || {};
+        userData.cooldowns.gambling = Date.now();
         
-        if (!player.gambling) player.gambling = {};
-        player.gambling.totalBet = (player.gambling.totalBet || 0) + bet;
-        player.gambling.totalWon = (player.gambling.totalWon || 0) + result.winnings;
-        player.gambling.gamesPlayed = (player.gambling.gamesPlayed || 0) + 1;
+        // Update gambling statistics
+        if (!userData.stats) userData.stats = {};
+        userData.stats.totalGambled = (userData.stats.totalGambled || 0) + bet;
+        userData.stats.totalWon = (userData.stats.totalWon || 0) + result.winnings;
+        userData.stats.gamblingGames = (userData.stats.gamblingGames || 0) + 1;
         
-        if (result.winnings > (player.gambling.biggestWin || 0)) {
-            player.gambling.biggestWin = result.winnings;
-        }
-
         if (result.won) {
-            player.gambling.winStreak = (player.gambling.winStreak || 0) + 1;
-            if (player.gambling.winStreak > (player.gambling.bestStreak || 0)) {
-                player.gambling.bestStreak = player.gambling.winStreak;
-            }
-        } else {
-            player.gambling.winStreak = 0;
+            userData.stats.gamblingWins = (userData.stats.gamblingWins || 0) + 1;
+            userData.stats.biggestWin = Math.max(userData.stats.biggestWin || 0, result.winnings);
         }
-
-        await db.updatePlayer(interaction.user.id, player);
-
+        
+        await db.setUser(userId, userData);
+        
         // Create result embed
         const embed = new EmbedBuilder()
-            .setColor(result.won ? '#00FF00' : '#FF0000')
-            .setTitle(`${game.name} Results`)
+            .setColor(result.won ? config.embedColors.success : config.embedColors.error)
+            .setTitle(`🎰 ${result.gameTitle}`)
             .setDescription(result.description)
-            .addFields(
-                { name: '💰 Bet Amount', value: `${bet.toLocaleString()} coins`, inline: true },
-                { name: result.won ? '🎉 Won' : '💸 Lost', value: `${result.winnings.toLocaleString()} coins`, inline: true },
-                { name: '📊 Net Result', value: `${netGain >= 0 ? '+' : ''}${netGain.toLocaleString()} coins`, inline: true },
-                { name: '💳 Balance', value: `${player.coins.toLocaleString()} coins`, inline: true },
-                { name: '🔥 Win Streak', value: `${player.gambling.winStreak || 0}`, inline: true },
-                { name: '🎯 Win Rate', value: `${this.calculateWinRate(player)}%`, inline: true }
-            )
-            .setFooter({ 
-                text: result.won ? 
-                    `Congratulations! • Game #${player.gambling.gamesPlayed}` : 
-                    `Better luck next time! • Game #${player.gambling.gamesPlayed}`
-            })
+            .addFields([
+                { name: '💰 Bet Amount', value: `${bet} coins`, inline: true },
+                { name: result.won ? '🎉 Winnings' : '💸 Lost', value: `${result.winnings} coins`, inline: true },
+                { name: '📊 Net Result', value: `${netGain >= 0 ? '+' : ''}${netGain} coins`, inline: true },
+                { name: '💳 New Balance', value: `${userData.inventory.coins} coins`, inline: true },
+                { name: '🎮 Result', value: result.details, inline: true },
+                { name: '🎯 Outcome', value: result.won ? '**YOU WON!** 🎉' : '**You Lost** 😔', inline: true }
+            ])
+            .setThumbnail(interaction.user.displayAvatarURL())
             .setTimestamp();
-
+            
+        // Add gambling tips
+        const tips = [
+            '💡 Set a budget and stick to it!',
+            '🎯 Know when to walk away',
+            '📈 Gambling is entertainment, not investment',
+            '🍀 Remember: the house always has an edge',
+            '⏰ Take breaks between games'
+        ];
+        
+        embed.setFooter({ text: tips[Math.floor(Math.random() * tips.length)] });
+        
+        // Add special messages
         if (result.jackpot) {
-            embed.addFields({
-                name: '🎊 JACKPOT!',
-                value: 'You hit the ultimate prize!',
-                inline: false
-            });
+            embed.addFields([
+                { name: '🎊 JACKPOT!', value: 'You hit the jackpot! Amazing luck!', inline: false }
+            ]);
         }
-
-        if (result.specialMessage) {
-            embed.addFields({
-                name: '✨ Special',
-                value: result.specialMessage,
-                inline: false
-            });
+        
+        if (netGain >= bet * 5) {
+            embed.addFields([
+                { name: '🔥 Big Win!', value: 'Incredible! You multiplied your bet significantly!', inline: false }
+            ]);
         }
-
-        // Create interactive buttons
+        
         const buttons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`gamble_again_${gameType}_${bet}`)
-                    .setLabel('🎰 Play Again')
+                    .setCustomId(`gamble_${game}_${bet}`)
+                    .setLabel(`🎰 Play ${result.gameTitle} Again`)
                     .setStyle(ButtonStyle.Primary)
-                    .setDisabled(player.coins < bet),
+                    .setDisabled(userData.inventory.coins < bet),
                 new ButtonBuilder()
                     .setCustomId('gambling_stats')
-                    .setLabel('📊 My Stats')
+                    .setLabel('📊 Gambling Stats')
                     .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
-                    .setCustomId('change_bet')
-                    .setLabel('💰 Change Bet')
+                    .setCustomId('gambling_help')
+                    .setLabel('❓ Game Rules')
                     .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
-                    .setCustomId('cashout')
-                    .setLabel('🏦 Cash Out')
+                    .setCustomId('daily_claim')
+                    .setLabel('💰 Earn More Coins')
                     .setStyle(ButtonStyle.Success)
             );
-
-        await interaction.editReply({ 
-            embeds: [embed], 
-            components: [buttons] 
-        });
-
-        // Set up button collector
-        this.setupButtonCollector(interaction, gameType, player);
+            
+        await interaction.reply({ embeds: [embed], components: [buttons] });
     },
-
-    async executeGame(gameType, bet, player) {
-        switch (gameType) {
-            case 'slots':
-                return this.playSlots(bet, player);
-            case 'dice':
-                return this.playDice(bet, player);
-            case 'coinflip':
-                return this.playCoinFlip(bet, player);
-            case 'blackjack':
-                return this.playBlackjack(bet, player);
-            case 'roulette':
-                return this.playRoulette(bet, player);
-            default:
-                return { won: false, winnings: 0, description: 'Invalid game' };
-        }
-    },
-
-    playSlots(bet, player) {
-        const symbols = gamblingGames.slots.symbols;
-        const reels = Array(3).fill().map(() => symbols[Math.floor(Math.random() * symbols.length)]);
+    
+    playSlots(bet) {
+        const symbols = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎', '7️⃣', '🔔'];
+        const reel1 = symbols[Math.floor(Math.random() * symbols.length)];
+        const reel2 = symbols[Math.floor(Math.random() * symbols.length)];
+        const reel3 = symbols[Math.floor(Math.random() * symbols.length)];
         
         let winnings = 0;
         let won = false;
         let jackpot = false;
-        let specialMessage = '';
-
-        // Check for three of a kind
-        if (reels[0] === reels[1] && reels[1] === reels[2]) {
+        
+        // Check for wins
+        if (reel1 === reel2 && reel2 === reel3) {
+            // Three of a kind
             won = true;
-            const symbol = reels[0];
-            const multiplier = gamblingGames.slots.payouts.three_match[symbol] || 5;
-            winnings = bet * multiplier;
-            
-            if (symbol === '💎') {
+            if (reel1 === '💎') {
+                winnings = bet * 50; // Diamond jackpot
                 jackpot = true;
-                specialMessage = 'DIAMOND JACKPOT! 💎✨';
-            } else if (symbol === '7️⃣') {
-                specialMessage = 'Lucky Sevens! 🍀';
+            } else if (reel1 === '7️⃣') {
+                winnings = bet * 25; // Lucky 7s
+            } else if (reel1 === '⭐') {
+                winnings = bet * 15; // Stars
+            } else {
+                winnings = bet * 10; // Other three of a kind
             }
-        }
-        // Check for two of a kind
-        else if (reels[0] === reels[1] || reels[1] === reels[2] || reels[0] === reels[2]) {
+        } else if (reel1 === reel2 || reel2 === reel3 || reel1 === reel3) {
+            // Two of a kind
             won = true;
-            winnings = bet * gamblingGames.slots.payouts.two_match;
+            winnings = bet * 2;
         }
-
-        // Luck bonus
-        const luckBonus = Math.random() < (player.gambling?.winStreak || 0) * 0.01;
-        if (luckBonus && !won) {
-            won = true;
-            winnings = bet;
-            specialMessage = 'Lucky streak bonus! 🍀';
-        }
-
+        
         return {
+            gameTitle: 'Slot Machine',
+            description: `**${reel1} | ${reel2} | ${reel3}**`,
+            details: won ? (jackpot ? 'JACKPOT! Three diamonds!' : 'Matching symbols!') : 'No matches',
             won,
             winnings,
-            jackpot,
-            specialMessage,
-            description: `**${reels[0]} | ${reels[1]} | ${reels[2]}**\n\n${won ? (jackpot ? '🎊 JACKPOT! 🎊' : '🎉 Winner!') : '❌ No match'}`
+            jackpot
         };
     },
-
-    playDice(bet, player) {
+    
+    playDice(bet) {
         const playerRoll = Math.floor(Math.random() * 6) + 1;
         const houseRoll = Math.floor(Math.random() * 6) + 1;
         
         let winnings = 0;
         let won = false;
-        let specialMessage = '';
-
+        
         if (playerRoll > houseRoll) {
             won = true;
-            winnings = bet * 2;
             if (playerRoll === 6 && houseRoll === 1) {
-                winnings = bet * 4;
-                specialMessage = 'Perfect roll! Maximum difference! 🎯';
+                winnings = bet * 6; // Maximum difference
+            } else {
+                winnings = bet * 2;
             }
         } else if (playerRoll === houseRoll) {
-            winnings = bet; // Push
-            specialMessage = 'Tie game - bet returned! 🤝';
+            winnings = bet; // Tie - return bet
         }
-
+        
         return {
+            gameTitle: 'Dice Battle',
+            description: `🎲 You rolled **${playerRoll}** vs House **${houseRoll}**`,
+            details: playerRoll > houseRoll ? 'Your dice won!' : playerRoll === houseRoll ? 'Tie game!' : 'House dice won',
             won: playerRoll >= houseRoll,
-            winnings,
-            specialMessage,
-            description: `🎲 **Your Roll:** ${playerRoll}\n🏠 **House Roll:** ${houseRoll}\n\n${playerRoll > houseRoll ? '🎉 You win!' : playerRoll === houseRoll ? '🤝 Tie!' : '❌ House wins'}`
+            winnings
         };
     },
-
-    playCoinFlip(bet, player) {
-        const choices = ['heads', 'tails'];
-        const playerChoice = choices[Math.floor(Math.random() * 2)];
-        const result = choices[Math.floor(Math.random() * 2)];
-        const won = playerChoice === result;
-
-        return {
-            won,
-            winnings: won ? bet * 2 : 0,
-            description: `🪙 **You called:** ${playerChoice}\n🪙 **Result:** ${result}\n\n${won ? '🎉 Correct call!' : '❌ Wrong call'}`
-        };
-    },
-
-    playBlackjack(bet, player) {
+    
+    playBlackjack(bet) {
         const drawCard = () => Math.min(Math.floor(Math.random() * 13) + 1, 10);
         
-        const playerCards = [drawCard(), drawCard()];
-        const dealerCards = [drawCard(), drawCard()];
+        const playerCard1 = drawCard();
+        const playerCard2 = drawCard();
+        const playerTotal = playerCard1 + playerCard2;
         
-        const playerTotal = playerCards.reduce((a, b) => a + b, 0);
-        const dealerTotal = dealerCards.reduce((a, b) => a + b, 0);
+        const dealerCard = drawCard();
+        const dealerHidden = drawCard();
+        const dealerTotal = dealerCard + dealerHidden;
         
         let winnings = 0;
         let won = false;
-        let specialMessage = '';
-
+        
         if (playerTotal === 21) {
             won = true;
-            winnings = Math.floor(bet * 2.5);
-            specialMessage = 'BLACKJACK! 🃏✨';
+            winnings = bet * 3; // Blackjack pays 3:2
         } else if (playerTotal > 21) {
             // Player bust
+            won = false;
         } else if (dealerTotal > 21 || playerTotal > dealerTotal) {
             won = true;
             winnings = bet * 2;
         } else if (playerTotal === dealerTotal) {
             winnings = bet; // Push
-            specialMessage = 'Push - bet returned! 🤝';
         }
-
+        
         return {
+            gameTitle: 'Blackjack',
+            description: `🃏 Your cards: **${playerCard1} + ${playerCard2} = ${playerTotal}**\n🏠 Dealer: **${dealerCard} + ? = ${dealerTotal}** (revealed)`,
+            details: playerTotal === 21 ? 'Blackjack!' : playerTotal > 21 ? 'Bust!' : dealerTotal > 21 ? 'Dealer bust!' : `${playerTotal} vs ${dealerTotal}`,
             won: playerTotal <= 21 && (dealerTotal > 21 || playerTotal >= dealerTotal),
-            winnings,
-            specialMessage,
-            description: `🃏 **Your Hand:** ${playerCards.join(' + ')} = **${playerTotal}**\n🏠 **Dealer:** ${dealerCards.join(' + ')} = **${dealerTotal}**\n\n${playerTotal === 21 ? '🃏 BLACKJACK!' : playerTotal > 21 ? '💥 Bust!' : dealerTotal > 21 ? '🏠 Dealer bust!' : `${playerTotal} vs ${dealerTotal}`}`
+            winnings
         };
     },
-
-    playRoulette(bet, player) {
+    
+    playCoinFlip(bet) {
+        const userChoice = Math.random() < 0.5 ? 'heads' : 'tails';
+        const result = Math.random() < 0.5 ? 'heads' : 'tails';
+        const won = userChoice === result;
+        
+        return {
+            gameTitle: 'Coin Flip',
+            description: `🪙 You called **${userChoice}** and the coin landed on **${result}**`,
+            details: won ? 'Perfect prediction!' : 'Wrong guess!',
+            won,
+            winnings: won ? bet * 2 : 0
+        };
+    },
+    
+    playRoulette(bet) {
         const number = Math.floor(Math.random() * 37); // 0-36
         const isRed = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(number);
         const isBlack = number !== 0 && !isRed;
+        const isEven = number !== 0 && number % 2 === 0;
+        const isOdd = number !== 0 && number % 2 === 1;
         
-        // Simple red/black bet
-        const playerBet = Math.random() < 0.5 ? 'red' : 'black';
-        const won = (playerBet === 'red' && isRed) || (playerBet === 'black' && isBlack);
+        // Simple betting on red/black
+        const userBet = Math.random() < 0.5 ? 'red' : 'black';
+        const won = (userBet === 'red' && isRed) || (userBet === 'black' && isBlack);
         
         const color = number === 0 ? 'green' : isRed ? 'red' : 'black';
-        let specialMessage = '';
         
-        if (number === 0) {
-            specialMessage = 'House wins on green zero! 🏠';
-        }
-
         return {
+            gameTitle: 'Roulette',
+            description: `🎡 Ball landed on **${number}** (${color})\nYou bet on **${userBet}**`,
+            details: number === 0 ? 'House wins (green 0)!' : won ? `${color} wins!` : `${color} loses!`,
             won: won && number !== 0,
-            winnings: won && number !== 0 ? bet * 2 : 0,
-            specialMessage,
-            description: `🎡 **Ball landed on:** ${number} (${color})\n🎯 **You bet:** ${playerBet}\n\n${number === 0 ? '🏠 House wins!' : won ? `🎉 ${color} wins!` : `❌ ${color} loses!`}`
+            winnings: won && number !== 0 ? bet * 2 : 0
         };
-    },
-
-    async showStats(interaction, player) {
-        const stats = player.gambling || {};
-        const winRate = this.calculateWinRate(player);
-        const profitLoss = (stats.totalWon || 0) - (stats.totalBet || 0);
-
-        const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle(`🎰 ${interaction.user.username}'s Gambling Stats`)
-            .setThumbnail(interaction.user.displayAvatarURL())
-            .addFields(
-                { name: '🎮 Games Played', value: `${stats.gamesPlayed || 0}`, inline: true },
-                { name: '🎯 Win Rate', value: `${winRate}%`, inline: true },
-                { name: '🔥 Current Streak', value: `${stats.winStreak || 0}`, inline: true },
-                { name: '💰 Total Bet', value: `${(stats.totalBet || 0).toLocaleString()} coins`, inline: true },
-                { name: '🏆 Total Won', value: `${(stats.totalWon || 0).toLocaleString()} coins`, inline: true },
-                { name: '📊 Net P/L', value: `${profitLoss >= 0 ? '+' : ''}${profitLoss.toLocaleString()} coins`, inline: true },
-                { name: '💎 Biggest Win', value: `${(stats.biggestWin || 0).toLocaleString()} coins`, inline: true },
-                { name: '🌟 Best Streak', value: `${stats.bestStreak || 0} wins`, inline: true },
-                { name: '💳 Current Balance', value: `${player.coins.toLocaleString()} coins`, inline: true }
-            )
-            .setFooter({ 
-                text: `Gambler since ${new Date().toLocaleDateString()} • Remember to gamble responsibly!`
-            })
-            .setTimestamp();
-
-        await interaction.reply({ embeds: [embed] });
-    },
-
-    async showSettings(interaction, player) {
-        const preferences = player.gambling?.preferences || {};
-        
-        const embed = new EmbedBuilder()
-            .setColor('#4169E1')
-            .setTitle('⚙️ Gambling Settings')
-            .setDescription('Configure your gambling preferences:')
-            .addFields(
-                { name: '🔄 Auto Play', value: preferences.autoPlay ? '✅ Enabled' : '❌ Disabled', inline: true },
-                { name: '⚡ Quick Bet', value: preferences.quickBet ? '✅ Enabled' : '❌ Disabled', inline: true },
-                { name: '⚠️ Risk Level', value: preferences.riskLevel || 'Medium', inline: true }
-            );
-
-        const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId('gambling_settings')
-            .setPlaceholder('Choose a setting to modify')
-            .addOptions([
-                {
-                    label: 'Toggle Auto Play',
-                    description: 'Automatically play with last bet amount',
-                    value: 'autoplay'
-                },
-                {
-                    label: 'Toggle Quick Bet',
-                    description: 'Skip confirmation dialogs',
-                    value: 'quickbet'
-                },
-                {
-                    label: 'Set Risk Level',
-                    description: 'Low, Medium, or High risk tolerance',
-                    value: 'risk'
-                }
-            ]);
-
-        const row = new ActionRowBuilder().addComponents(selectMenu);
-        await interaction.reply({ embeds: [embed], components: [row] });
-    },
-
-    setupButtonCollector(interaction, gameType, player) {
-        const filter = i => i.user.id === interaction.user.id;
-        const collector = interaction.channel.createMessageComponentCollector({ 
-            filter, 
-            time: 300000 // 5 minutes
-        });
-
-        collector.on('collect', async buttonInteraction => {
-            try {
-                if (buttonInteraction.customId.startsWith('gamble_again_')) {
-                    const [, , game, betAmount] = buttonInteraction.customId.split('_');
-                    await this.playGame(buttonInteraction, game, parseInt(betAmount), player);
-                }
-                // Handle other buttons...
-            } catch (error) {
-                console.error('Button interaction error:', error);
-            }
-        });
-    },
-
-    calculateWinRate(player) {
-        const stats = player.gambling || {};
-        if (!stats.gamesPlayed) return 0;
-        
-        const wins = stats.totalWon > stats.totalBet ? 
-            Math.floor(stats.gamesPlayed * 0.4) : // Estimate based on profit
-            Math.floor(stats.gamesPlayed * 0.3); // Conservative estimate
-            
-        return Math.floor((wins / stats.gamesPlayed) * 100);
     }
 };

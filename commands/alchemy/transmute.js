@@ -87,33 +87,14 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor('#9400D3')
-                .setTitle('✨ Material Transmutation Laboratory')
-                .setDescription(`**Transform materials using ancient alchemy!**\n\nCreating ${amount}x **${material.charAt(0).toUpperCase() + material.slice(1)}**`)
+                .setTitle('✨ Material Transmutation')
+                .setDescription(`Transmute materials into ${amount}x ${material}?`)
                 .addFields(
-                    { 
-                        name: '🧪 Required Materials', 
-                        value: Object.entries(recipe.materials)
-                            .map(([mat, amt]) => {
-                                const playerAmount = player.inventory?.materials?.[mat] || 0;
-                                const needed = amt * amount;
-                                const status = playerAmount >= needed ? '✅' : '❌';
-                                return `${status} **${mat}**: ${playerAmount}/${needed}`;
-                            }).join('\n'), 
-                        inline: true 
-                    },
-                    { 
-                        name: '💰 Costs & Rewards', 
-                        value: `**Cost:** ${totalCost} coins\n**Result:** ${amount * recipe.result}x ${material}\n**Category:** ${category === 'basic' ? 'Basic' : 'Advanced'}`, 
-                        inline: true 
-                    },
-                    {
-                        name: '📊 Your Resources',
-                        value: `**Current Coins:** ${player.coins || 0}\n**Alchemy Level:** ${player.skills?.alchemy?.level || 1}\n**Experience:** ${player.skills?.alchemy?.exp || 0} XP`,
-                        inline: true
-                    }
-                )
-                .setFooter({ text: 'Advanced transmutations require Alchemy level 5+' })
-                .setTimestamp();
+                    { name: 'Required Materials', value: Object.entries(recipe.materials)
+                        .map(([mat, amt]) => `${mat}: ${amt * amount}`).join('\n'), inline: true },
+                    { name: 'Cost', value: `${totalCost} coins`, inline: true },
+                    { name: 'Result', value: `${amount * recipe.result}x ${material}`, inline: true }
+                );
 
             if (missingMaterials.length > 0) {
                 embed.addFields({
@@ -139,24 +120,17 @@ module.exports = {
 
             const confirm = new ButtonBuilder()
                 .setCustomId('transmute_confirm')
-                .setLabel(`Transmute ${amount}x ${material}`)
+                .setLabel('Transmute')
                 .setStyle(ButtonStyle.Primary)
                 .setEmoji('✨');
 
             const cancel = new ButtonBuilder()
                 .setCustomId('transmute_cancel')
                 .setLabel('Cancel')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('❌');
-
-            const infoButton = new ButtonBuilder()
-                .setCustomId('transmute_info')
-                .setLabel('View Info')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('ℹ️');
+                .setStyle(ButtonStyle.Secondary);
 
             const row = new ActionRowBuilder()
-                .addComponents(confirm, infoButton, cancel);
+                .addComponents(confirm, cancel);
 
             const response = await interaction.editReply({
                 embeds: [embed],
@@ -206,17 +180,7 @@ module.exports = {
                         embeds: [successEmbed],
                         components: []
                     });
-                } else if (confirmation.customId === 'transmute_info') {
-                    // Logic for info button would go here.
-                    // For now, we'll just re-send the original embed and buttons, or handle it differently.
-                    // For demonstration, let's just cancel and inform the user.
-                    await confirmation.update({
-                        content: 'ℹ️ View Info button clicked. More details can be added here.',
-                        embeds: [embed], // Re-displaying the original embed
-                        components: [row] // Re-displaying the buttons
-                    });
-                }
-                else {
+                } else {
                     await confirmation.update({
                         content: '❌ Transmutation cancelled.',
                         embeds: [],
@@ -224,9 +188,8 @@ module.exports = {
                     });
                 }
             } catch (e) {
-                console.error("Error awaiting message component:", e);
                 await interaction.editReply({
-                    content: '❌ Transmutation offer expired or an error occurred.',
+                    content: '❌ Transmutation offer expired.',
                     embeds: [],
                     components: []
                 });

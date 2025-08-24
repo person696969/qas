@@ -1,4 +1,3 @@
-
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const config = require('../../config.js');
 const db = require('../../database.js');
@@ -17,11 +16,11 @@ module.exports = {
                     { name: '🗺️ Detailed View', value: 'detailed' },
                     { name: '📊 Statistics', value: 'stats' }
                 )),
-    
+
     async execute(interaction) {
         const viewType = interaction.options?.getString('view') || 'world';
         const userId = interaction.user.id;
-        const userProfile = await db.get(`user_${userId}`) || {
+        const userProfile = await db.getPlayer(userId) || {
             level: 1,
             location: 'Village Square',
             discoveredLocations: ['Village Square'],
@@ -34,11 +33,11 @@ module.exports = {
         };
 
         const allLocations = [
-            { 
+            {
                 id: 'village_square',
-                name: 'Village Square', 
-                level: 1, 
-                treasures: 2, 
+                name: 'Village Square',
+                level: 1,
+                treasures: 2,
                 discovered: true,
                 coordinates: 'A1',
                 difficulty: 'Beginner',
@@ -49,11 +48,11 @@ module.exports = {
                 npcs: ['Merchant Tom', 'Guard Captain'],
                 specialFeatures: ['Market', 'Inn', 'Training Grounds']
             },
-            { 
+            {
                 id: 'mystic_forest',
-                name: 'Mystic Forest', 
-                level: 3, 
-                treasures: 5, 
+                name: 'Mystic Forest',
+                level: 3,
+                treasures: 5,
                 discovered: userProfile.discoveredLocations?.includes('Mystic Forest'),
                 coordinates: 'B2',
                 difficulty: 'Easy',
@@ -64,11 +63,11 @@ module.exports = {
                 npcs: ['Elder Druid', 'Forest Guardian'],
                 specialFeatures: ['Ancient Tree', 'Hidden Springs']
             },
-            { 
+            {
                 id: 'crystal_caves',
-                name: 'Crystal Caves', 
-                level: 5, 
-                treasures: 8, 
+                name: 'Crystal Caves',
+                level: 5,
+                treasures: 8,
                 discovered: userProfile.discoveredLocations?.includes('Crystal Caves'),
                 coordinates: 'C3',
                 difficulty: 'Medium',
@@ -79,11 +78,11 @@ module.exports = {
                 npcs: ['Crystal Sage', 'Mining Foreman'],
                 specialFeatures: ['Crystal Formations', 'Underground Lake']
             },
-            { 
+            {
                 id: 'ancient_ruins',
-                name: 'Ancient Ruins', 
-                level: 8, 
-                treasures: 12, 
+                name: 'Ancient Ruins',
+                level: 8,
+                treasures: 12,
                 discovered: userProfile.discoveredLocations?.includes('Ancient Ruins'),
                 coordinates: 'D4',
                 difficulty: 'Hard',
@@ -94,11 +93,11 @@ module.exports = {
                 npcs: ['Archaeologist', 'Rune Keeper'],
                 specialFeatures: ['Temple Complex', 'Hidden Chambers']
             },
-            { 
+            {
                 id: 'dragons_peak',
-                name: 'Dragon\'s Peak', 
-                level: 12, 
-                treasures: 20, 
+                name: 'Dragon\'s Peak',
+                level: 12,
+                treasures: 20,
                 discovered: userProfile.discoveredLocations?.includes('Dragon\'s Peak'),
                 coordinates: 'E5',
                 difficulty: 'Expert',
@@ -109,11 +108,11 @@ module.exports = {
                 npcs: ['Dragon Lord', 'Fire Mage'],
                 specialFeatures: ['Dragon Lair', 'Volcanic Forge']
             },
-            { 
+            {
                 id: 'void_nexus',
-                name: 'Void Nexus', 
-                level: 20, 
-                treasures: 50, 
+                name: 'Void Nexus',
+                level: 20,
+                treasures: 50,
                 discovered: userProfile.discoveredLocations?.includes('Void Nexus'),
                 coordinates: 'Z9',
                 difficulty: 'Legendary',
@@ -154,20 +153,20 @@ module.exports = {
             .setDescription('**Your Personal Adventure Chart**\n\nExplore the vast world and discover hidden treasures!')
             .setThumbnail('https://cdn.discordapp.com/attachments/123456789/treasure-map.png')
             .addFields([
-                { 
-                    name: '📍 Current Location', 
-                    value: `**${userProfile.location || 'Village Square'}**\n${this.getLocationEmoji(userProfile.location)}`, 
-                    inline: true 
+                {
+                    name: '📍 Current Location',
+                    value: `**${userProfile.location || 'Village Square'}**\n${this.getLocationEmoji(userProfile.location)}`,
+                    inline: true
                 },
-                { 
-                    name: '🗺️ Discovery Progress', 
-                    value: `${discoveredCount}/${allLocations.length} locations\n${this.createProgressBar(discoveredCount, allLocations.length)}`, 
-                    inline: true 
+                {
+                    name: '🗺️ Discovery Progress',
+                    value: `${discoveredCount}/${allLocations.length} locations\n${this.createProgressBar(discoveredCount, allLocations.length)}`,
+                    inline: true
                 },
-                { 
-                    name: '💎 Available Treasures', 
-                    value: `${totalTreasures} discovered\n🏆 ${allLocations.reduce((sum, loc) => sum + loc.treasures, 0)} total`, 
-                    inline: true 
+                {
+                    name: '💎 Available Treasures',
+                    value: `${totalTreasures} discovered\n🏆 ${allLocations.reduce((sum, loc) => sum + loc.treasures, 0)} total`,
+                    inline: true
                 }
             ]);
 
@@ -189,30 +188,30 @@ module.exports = {
         // Add discovered locations details
         const discoveredLocations = allLocations.filter(loc => loc.discovered);
         if (discoveredLocations.length > 0) {
-            const locationList = discoveredLocations.map(loc => 
+            const locationList = discoveredLocations.map(loc =>
                 `${this.getDifficultyEmoji(loc.difficulty)} **${loc.name}** (${loc.coordinates})\n` +
                 `└ Level ${loc.level} • ${loc.treasures} treasures • ${loc.weather}`
             ).join('\n\n');
-            
-            embed.addFields({ 
-                name: '🎯 Discovered Locations', 
-                value: locationList, 
-                inline: false 
+
+            embed.addFields({
+                name: '🎯 Discovered Locations',
+                value: locationList,
+                inline: false
             });
         }
 
         // Add hints for undiscovered areas
         const hintLocations = allLocations.filter(loc => !loc.discovered && userProfile.level >= loc.level - 3);
         if (hintLocations.length > 0) {
-            const hintList = hintLocations.map(loc => 
+            const hintList = hintLocations.map(loc =>
                 `❓ **Mysterious Area** (${loc.coordinates})\n` +
                 `└ Requires Level ${loc.level} • Legends speak of ${loc.treasures} treasures...`
             ).join('\n\n');
-            
-            embed.addFields({ 
-                name: '🔍 Potential Discoveries', 
-                value: hintList, 
-                inline: false 
+
+            embed.addFields({
+                name: '🔍 Potential Discoveries',
+                value: hintList,
+                inline: false
             });
         }
 
@@ -261,7 +260,7 @@ module.exports = {
     },
 
     async showCurrentArea(interaction, userProfile, allLocations) {
-        const currentLocation = allLocations.find(loc => 
+        const currentLocation = allLocations.find(loc =>
             loc.name === userProfile.location || loc.id === userProfile.location
         ) || allLocations[0];
 
@@ -271,35 +270,35 @@ module.exports = {
             .setDescription(`**${currentLocation.description}**\n\n*You are currently exploring this area...*`)
             .setThumbnail('https://cdn.discordapp.com/attachments/123456789/location-icon.png')
             .addFields([
-                { 
-                    name: '🗺️ Location Info', 
-                    value: `**Coordinates:** ${currentLocation.coordinates}\n**Difficulty:** ${this.getDifficultyEmoji(currentLocation.difficulty)} ${currentLocation.difficulty}\n**Weather:** ${this.getWeatherEmoji(currentLocation.weather)} ${currentLocation.weather}`, 
-                    inline: true 
+                {
+                    name: '🗺️ Location Info',
+                    value: `**Coordinates:** ${currentLocation.coordinates}\n**Difficulty:** ${this.getDifficultyEmoji(currentLocation.difficulty)} ${currentLocation.difficulty}\n**Weather:** ${this.getWeatherEmoji(currentLocation.weather)} ${currentLocation.weather}`,
+                    inline: true
                 },
-                { 
-                    name: '💎 Treasures & Rewards', 
-                    value: `**Available:** ${currentLocation.treasures} treasures\n**Required Level:** ${currentLocation.level}\n**Success Rate:** ${this.calculateSuccessRate(userProfile.level, currentLocation.level)}%`, 
-                    inline: true 
+                {
+                    name: '💎 Treasures & Rewards',
+                    value: `**Available:** ${currentLocation.treasures} treasures\n**Required Level:** ${currentLocation.level}\n**Success Rate:** ${this.calculateSuccessRate(userProfile.level, currentLocation.level)}%`,
+                    inline: true
                 },
-                { 
-                    name: '⚔️ Dangers', 
-                    value: currentLocation.enemies.length > 0 ? currentLocation.enemies.map(enemy => `• ${enemy}`).join('\n') : '• Safe area', 
-                    inline: true 
+                {
+                    name: '⚔️ Dangers',
+                    value: currentLocation.enemies.length > 0 ? currentLocation.enemies.map(enemy => `• ${enemy}`).join('\n') : '• Safe area',
+                    inline: true
                 },
-                { 
-                    name: '🎒 Available Resources', 
-                    value: currentLocation.resources.map(resource => `• ${resource}`).join('\n'), 
-                    inline: true 
+                {
+                    name: '🎒 Available Resources',
+                    value: currentLocation.resources.map(resource => `• ${resource}`).join('\n'),
+                    inline: true
                 },
-                { 
-                    name: '👥 NPCs Present', 
-                    value: currentLocation.npcs.map(npc => `• ${npc}`).join('\n'), 
-                    inline: true 
+                {
+                    name: '👥 NPCs Present',
+                    value: currentLocation.npcs.map(npc => `• ${npc}`).join('\n'),
+                    inline: true
                 },
-                { 
-                    name: '✨ Special Features', 
-                    value: currentLocation.specialFeatures.map(feature => `• ${feature}`).join('\n'), 
-                    inline: true 
+                {
+                    name: '✨ Special Features',
+                    value: currentLocation.specialFeatures.map(feature => `• ${feature}`).join('\n'),
+                    inline: true
                 }
             ])
             .setFooter({ text: `Use /hunt to search for treasures in this area!` });

@@ -281,7 +281,7 @@ module.exports = {
                 }));
 
                 return new StringSelectMenuBuilder()
-                    .setCustomId('select_potion_category')
+                    .setCustomId('select_category')
                     .setPlaceholder('Choose a potion category...')
                     .addOptions(options);
             };
@@ -420,12 +420,12 @@ module.exports = {
                 const canCraft = canCraftPotion(recipe, amount);
 
                 const buttons = [];
-
+                
                 // Amount adjustment buttons
                 if (amount > 1) {
                     buttons.push(
                         new ButtonBuilder()
-                            .setCustomId(`potion_amount_decrease_${categoryKey}_${potionKey}_${amount}`)
+                            .setCustomId(`amount_decrease_${categoryKey}_${potionKey}_${amount}`)
                             .setLabel('-1')
                             .setStyle(ButtonStyle.Secondary)
                             .setEmoji('➖')
@@ -435,7 +435,7 @@ module.exports = {
                 // Current amount display button (disabled)
                 buttons.push(
                     new ButtonBuilder()
-                        .setCustomId('potion_amount_display')
+                        .setCustomId('amount_display')
                         .setLabel(`Amount: ${amount}`)
                         .setStyle(ButtonStyle.Secondary)
                         .setDisabled(true)
@@ -444,7 +444,7 @@ module.exports = {
                 if (amount < 10) {
                     buttons.push(
                         new ButtonBuilder()
-                            .setCustomId(`potion_amount_increase_${categoryKey}_${potionKey}_${amount}`)
+                            .setCustomId(`amount_increase_${categoryKey}_${potionKey}_${amount}`)
                             .setLabel('+1')
                             .setStyle(ButtonStyle.Secondary)
                             .setEmoji('➕')
@@ -455,20 +455,20 @@ module.exports = {
 
                 // Action buttons
                 const craftButton = new ButtonBuilder()
-                    .setCustomId(`potion_craft_${categoryKey}_${potionKey}_${amount}`)
+                    .setCustomId(`craft_${categoryKey}_${potionKey}_${amount}`)
                     .setLabel(`Craft ${amount}x ${recipe.name}`)
                     .setStyle(canCraft ? ButtonStyle.Success : ButtonStyle.Danger)
                     .setEmoji('🧪')
                     .setDisabled(!canCraft);
 
                 const backButton = new ButtonBuilder()
-                    .setCustomId(`potion_back_to_category_${categoryKey}`)
+                    .setCustomId(`back_to_category_${categoryKey}`)
                     .setLabel('Back to Category')
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji('↩️');
 
                 const mainMenuButton = new ButtonBuilder()
-                    .setCustomId('potion_back_to_main')
+                    .setCustomId('back_to_main')
                     .setLabel('Main Menu')
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji('🏠');
@@ -508,7 +508,7 @@ module.exports = {
                     // Refresh player data
                     player = await db.getPlayer(userId) || player;
 
-                    if (componentInteraction.customId === 'potion_back_to_main') {
+                    if (componentInteraction.customId === 'back_to_main') {
                         // Return to main menu
                         const embed = createMainMenuEmbed();
                         const menu = createCategoryMenu();
@@ -519,7 +519,7 @@ module.exports = {
                             components: [row]
                         });
 
-                    } else if (componentInteraction.customId === 'select_potion_category') {
+                    } else if (componentInteraction.customId === 'select_category') {
                         // Show category recipes
                         const categoryKey = componentInteraction.values[0];
                         const embed = createCategoryEmbed(categoryKey);
@@ -539,12 +539,12 @@ module.exports = {
                         });
 
                         const recipeMenu = new StringSelectMenuBuilder()
-                            .setCustomId('select_potion_recipe')
+                            .setCustomId('select_recipe')
                             .setPlaceholder('Choose a recipe to craft...')
                             .addOptions(recipeOptions);
 
                         const backButton = new ButtonBuilder()
-                            .setCustomId('potion_back_to_main')
+                            .setCustomId('back_to_main')
                             .setLabel('Back to Main Menu')
                             .setStyle(ButtonStyle.Secondary)
                             .setEmoji('↩️');
@@ -557,7 +557,7 @@ module.exports = {
                             ]
                         });
 
-                    } else if (componentInteraction.customId === 'select_potion_recipe') {
+                    } else if (componentInteraction.customId === 'select_recipe') {
                         // Show recipe details
                         const [categoryKey, potionKey] = componentInteraction.values[0].split('_');
                         const embed = createPotionDetailEmbed(categoryKey, potionKey, 1);
@@ -568,13 +568,13 @@ module.exports = {
                             components: buttons
                         });
 
-                    } else if (componentInteraction.customId.startsWith('potion_amount_')) {
+                    } else if (componentInteraction.customId.startsWith('amount_')) {
                         // Handle amount changes
                         const parts = componentInteraction.customId.split('_');
-                        const action = parts[2]; // increase or decrease
-                        const categoryKey = parts[3];
-                        const potionKey = parts[4];
-                        let amount = parseInt(parts[5]);
+                        const action = parts[1]; // increase or decrease
+                        const categoryKey = parts[2];
+                        const potionKey = parts[3];
+                        let amount = parseInt(parts[4]);
 
                         if (action === 'increase' && amount < 10) {
                             amount++;
@@ -590,12 +590,12 @@ module.exports = {
                             components: buttons
                         });
 
-                    } else if (componentInteraction.customId.startsWith('potion_craft_')) {
+                    } else if (componentInteraction.customId.startsWith('craft_')) {
                         // Handle crafting
                         const parts = componentInteraction.customId.split('_');
-                        const categoryKey = parts[2];
-                        const potionKey = parts[3];
-                        const amount = parseInt(parts[4]);
+                        const categoryKey = parts[1];
+                        const potionKey = parts[2];
+                        const amount = parseInt(parts[3]);
                         
                         const recipe = potionCategories[categoryKey].recipes[potionKey];
                         
@@ -607,7 +607,7 @@ module.exports = {
                                 .setFooter({ text: 'Check the recipe requirements and try again.' });
 
                             const backButton = new ButtonBuilder()
-                                .setCustomId(`potion_back_to_category_${categoryKey}`)
+                                .setCustomId(`back_to_category_${categoryKey}`)
                                 .setLabel('Back')
                                 .setStyle(ButtonStyle.Secondary)
                                 .setEmoji('↩️');
@@ -682,7 +682,7 @@ module.exports = {
                             .setTimestamp();
 
                         const continueButton = new ButtonBuilder()
-                            .setCustomId('potion_back_to_main')
+                            .setCustomId('back_to_main')
                             .setLabel('Continue Crafting')
                             .setStyle(ButtonStyle.Primary)
                             .setEmoji('🧪');
@@ -692,9 +692,9 @@ module.exports = {
                             components: [new ActionRowBuilder().addComponents(continueButton)]
                         });
 
-                    } else if (componentInteraction.customId.startsWith('potion_back_to_category_')) {
+                    } else if (componentInteraction.customId.startsWith('back_to_category_')) {
                         // Return to category view
-                        const categoryKey = componentInteraction.customId.replace('potion_back_to_category_', '');
+                        const categoryKey = componentInteraction.customId.replace('back_to_category_', '');
                         const embed = createCategoryEmbed(categoryKey);
                         
                         // Recreate recipe selection menu
@@ -712,12 +712,12 @@ module.exports = {
                         });
 
                         const recipeMenu = new StringSelectMenuBuilder()
-                            .setCustomId('select_potion_recipe')
+                            .setCustomId('select_recipe')
                             .setPlaceholder('Choose a recipe to craft...')
                             .addOptions(recipeOptions);
 
                         const backButton = new ButtonBuilder()
-                            .setCustomId('potion_back_to_main')
+                            .setCustomId('back_to_main')
                             .setLabel('Back to Main Menu')
                             .setStyle(ButtonStyle.Secondary)
                             .setEmoji('↩️');
@@ -740,7 +740,7 @@ module.exports = {
                         .setDescription('Something went wrong while processing your request. Please try again.');
 
                     const backButton = new ButtonBuilder()
-                        .setCustomId('potion_back_to_main')
+                        .setCustomId('back_to_main')
                         .setLabel('Back to Main Menu')
                         .setStyle(ButtonStyle.Secondary)
                         .setEmoji('↩️');

@@ -1,109 +1,88 @@
-
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
-const config = require('../../config.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database.js');
 
-const tackleShop = {
+const fishingEquipment = {
     rods: {
-        basic_rod: {
-            name: 'Basic Fishing Rod',
-            emoji: '🎣',
-            price: 100,
-            durability: 100,
-            catchBonus: 1.0,
-            description: 'A simple wooden fishing rod perfect for beginners',
-            level: 1
+        wooden_rod: {
+            name: 'Wooden Fishing Rod',
+            cost: 100,
+            power: 1,
+            durability: 50,
+            description: 'A basic wooden fishing rod',
+            emoji: '🎣'
+        },
+        bamboo_rod: {
+            name: 'Bamboo Rod',
+            cost: 500,
+            power: 2,
+            durability: 75,
+            description: 'Flexible and durable bamboo rod',
+            emoji: '🎋'
         },
         carbon_rod: {
             name: 'Carbon Fiber Rod',
-            emoji: '🎣',
-            price: 500,
-            durability: 200,
-            catchBonus: 1.3,
-            description: 'Lightweight and strong carbon fiber construction',
-            level: 5
+            cost: 2500,
+            power: 4,
+            durability: 150,
+            description: 'Professional-grade carbon fiber rod',
+            emoji: '⚡'
         },
-        professional_rod: {
-            name: 'Professional Rod',
-            emoji: '🎣',
-            price: 1500,
-            durability: 350,
-            catchBonus: 1.6,
-            description: 'High-end rod used by professional anglers',
-            level: 15
-        },
-        legendary_rod: {
-            name: 'Legendary Poseidon Rod',
-            emoji: '🔱',
-            price: 5000,
-            durability: 500,
-            catchBonus: 2.0,
-            description: 'Blessed by the sea god himself',
-            level: 30
+        mythril_rod: {
+            name: 'Mythril Rod',
+            cost: 10000,
+            power: 8,
+            durability: 300,
+            description: 'Magical mythril-infused rod',
+            emoji: '✨'
         }
     },
     bait: {
-        worms: {
-            name: 'Earthworms',
-            emoji: '🪱',
-            price: 10,
+        worm: {
+            name: 'Worms',
+            cost: 5,
+            power: 1,
+            quantity: 10,
+            description: 'Basic fishing bait',
+            emoji: '🪱'
+        },
+        minnow: {
+            name: 'Minnows',
+            cost: 15,
+            power: 2,
             quantity: 5,
-            catchBonus: 1.1,
-            description: 'Classic bait that works everywhere',
-            level: 1
+            description: 'Small fish as bait',
+            emoji: '🐟'
         },
-        minnows: {
-            name: 'Live Minnows',
-            emoji: '🐟',
-            price: 25,
+        shrimp: {
+            name: 'Magic Shrimp',
+            cost: 50,
+            power: 3,
             quantity: 3,
-            catchBonus: 1.3,
-            description: 'Live bait attracts bigger fish',
-            level: 3
-        },
-        lures: {
-            name: 'Spinning Lures',
-            emoji: '🎯',
-            price: 50,
-            quantity: 2,
-            catchBonus: 1.5,
-            description: 'Shiny lures for active fishing',
-            level: 8
-        },
-        magic_bait: {
-            name: 'Enchanted Bait',
-            emoji: '✨',
-            price: 100,
-            quantity: 1,
-            catchBonus: 2.0,
-            description: 'Magical bait that attracts rare fish',
-            level: 20
+            description: 'Enchanted shrimp bait',
+            emoji: '🦐'
         }
     },
     accessories: {
-        tackle_box: {
-            name: 'Tackle Box',
-            emoji: '🧰',
-            price: 200,
-            effect: 'bait_storage',
-            description: 'Increases bait storage capacity',
-            level: 5
+        hook: {
+            name: 'Steel Hook Set',
+            cost: 200,
+            durability: 25,
+            description: 'Durable steel fishing hooks',
+            emoji: '🪝'
         },
-        fishing_hat: {
-            name: 'Lucky Fishing Hat',
-            emoji: '🎩',
-            price: 300,
-            effect: 'luck_boost',
-            description: '+15% chance for rare catches',
-            level: 10
+        line: {
+            name: 'Enhanced Fishing Line',
+            cost: 300,
+            power: 1,
+            description: 'Strong and flexible line',
+            emoji: '➰'
         },
-        sonar: {
-            name: 'Fish Finder Sonar',
-            emoji: '📡',
-            price: 800,
-            effect: 'fish_detection',
-            description: 'Shows fish locations and types',
-            level: 15
+        lure: {
+            name: 'Glowing Lure',
+            cost: 750,
+            power: 2,
+            description: 'Attracts rare fish',
+            emoji: '💫'
         }
     }
 };
@@ -111,31 +90,28 @@ const tackleShop = {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('tackle')
-        .setDescription('🎣 Visit the tackle shop for fishing equipment')
+        .setDescription('🎣 Visit the fishing shop for equipment')
         .addSubcommand(subcommand =>
             subcommand
                 .setName('shop')
-                .setDescription('Browse the tackle shop'))
+                .setDescription('Browse fishing equipment')
+                .addStringOption(option =>
+                    option.setName('category')
+                        .setDescription('Equipment category')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: '🎣 Fishing Rods', value: 'rods' },
+                            { name: '🪱 Bait', value: 'bait' },
+                            { name: '🪝 Accessories', value: 'accessories' }
+                        )))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('inventory')
-                .setDescription('View your fishing equipment'))
+                .setDescription('Check your fishing equipment'))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('repair')
-                .setDescription('Repair your fishing equipment')
-                .addStringOption(option =>
-                    option.setName('item')
-                        .setDescription('Item to repair')
-                        .setRequired(true)))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('upgrade')
-                .setDescription('Upgrade your fishing equipment')
-                .addStringOption(option =>
-                    option.setName('item')
-                        .setDescription('Item to upgrade')
-                        .setRequired(true))),
+                .setDescription('Repair your fishing equipment')),
 
     async execute(interaction) {
         await interaction.deferReply();
@@ -143,320 +119,161 @@ module.exports = {
         try {
             const subcommand = interaction.options.getSubcommand();
             const userId = interaction.user.id;
+            
+            // Get player data
+            const player = await db.getPlayer(userId) || {
+                coins: 100,
+                fishingLevel: 1,
+                equipment: {
+                    rod: 'wooden_rod',
+                    bait: [],
+                    accessories: []
+                },
+                rodDurability: 50
+            };
 
-            let player = await db.getPlayer(userId);
-            if (!player) {
+            if (subcommand === 'shop') {
+                const category = interaction.options.getString('category');
+                const items = fishingEquipment[category];
+
+                const embed = new EmbedBuilder()
+                    .setColor('#1E90FF')
+                    .setTitle('🎣 Fishing Equipment Shop')
+                    .setDescription(`Your coins: ${player.coins} 💰`)
+                    .addFields(
+                        Object.entries(items).map(([id, item]) => ({
+                            name: `${item.emoji} ${item.name} (${item.cost} coins)`,
+                            value: `${item.description}\n${
+                                item.power ? `Power: +${item.power} ` : ''}${
+                                item.durability ? `Durability: ${item.durability} ` : ''}${
+                                item.quantity ? `Quantity: ${item.quantity}` : ''}`,
+                            inline: true
+                        }))
+                    );
+
+                // Create buttons for each item
+                const buttons = Object.entries(items).map(([id, item]) => 
+                    new ButtonBuilder()
+                        .setCustomId(`buy_${category}_${id}`)
+                        .setLabel(`Buy ${item.name}`)
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(player.coins < item.cost)
+                );
+
+                // Split buttons into rows of 5
+                const rows = [];
+                for (let i = 0; i < buttons.length; i += 5) {
+                    rows.push(
+                        new ActionRowBuilder()
+                            .addComponents(buttons.slice(i, i + 5))
+                    );
+                }
+
                 await interaction.editReply({
-                    content: '❌ You need to create a profile first!',
-                    ephemeral: true
+                    embeds: [embed],
+                    components: rows
                 });
-                return;
-            }
 
-            // Initialize fishing data if it doesn't exist
-            if (!player.fishing) {
-                player.fishing = {
-                    level: 1,
-                    experience: 0,
-                    equipment: {
-                        rod: 'basic_rod',
-                        bait: [],
-                        accessories: []
-                    },
-                    catches: {},
-                    totalCatches: 0
-                };
-            }
+            } else if (subcommand === 'inventory') {
+                const rod = fishingEquipment.rods[player.equipment.rod];
+                const durabilityPercent = (player.rodDurability / rod.durability * 100).toFixed(1);
+                const durabilityBar = createDurabilityBar(player.rodDurability, rod.durability);
 
-            switch (subcommand) {
-                case 'shop':
-                    await this.showShop(interaction, player);
-                    break;
-                case 'inventory':
-                    await this.showInventory(interaction, player);
-                    break;
-                case 'repair':
-                    await this.repairItem(interaction, player, interaction.options.getString('item'));
-                    break;
-                case 'upgrade':
-                    await this.upgradeItem(interaction, player, interaction.options.getString('item'));
-                    break;
+                const embed = new EmbedBuilder()
+                    .setColor('#4169E1')
+                    .setTitle('🎣 Fishing Equipment')
+                    .addFields(
+                        { 
+                            name: 'Current Rod',
+                            value: `${rod.emoji} ${rod.name}\nDurability: ${durabilityBar} (${durabilityPercent}%)`,
+                            inline: false
+                        },
+                        {
+                            name: '🪱 Bait Inventory',
+                            value: player.equipment.bait.length > 0
+                                ? player.equipment.bait.map(b => `${fishingEquipment.bait[b].emoji} ${fishingEquipment.bait[b].name}`).join('\n')
+                                : 'No bait',
+                            inline: true
+                        },
+                        {
+                            name: '🪝 Accessories',
+                            value: player.equipment.accessories.length > 0
+                                ? player.equipment.accessories.map(a => `${fishingEquipment.accessories[a].emoji} ${fishingEquipment.accessories[a].name}`).join('\n')
+                                : 'No accessories',
+                            inline: true
+                        }
+                    );
+
+                const repairButton = new ButtonBuilder()
+                    .setCustomId('repair_rod')
+                    .setLabel('Repair Rod')
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(durabilityPercent >= 100);
+
+                const row = new ActionRowBuilder()
+                    .addComponents(repairButton);
+
+                await interaction.editReply({
+                    embeds: [embed],
+                    components: [row]
+                });
+
+            } else if (subcommand === 'repair') {
+                const rod = fishingEquipment.rods[player.equipment.rod];
+                const maxDurability = rod.durability;
+                const currentDurability = player.rodDurability;
+
+                if (currentDurability >= maxDurability) {
+                    await interaction.editReply({
+                        content: '❌ Your fishing rod doesn\'t need repairs!',
+                        ephemeral: true
+                    });
+                    return;
+                }
+
+                const repairCost = Math.ceil((maxDurability - currentDurability) * (rod.cost / maxDurability / 2));
+
+                if (player.coins < repairCost) {
+                    await interaction.editReply({
+                        content: `❌ You need ${repairCost} coins to repair your rod!`,
+                        ephemeral: true
+                    });
+                    return;
+                }
+
+                // Apply repair
+                player.coins -= repairCost;
+                player.rodDurability = maxDurability;
+                await db.updatePlayer(userId, player);
+
+                const embed = new EmbedBuilder()
+                    .setColor('#32CD32')
+                    .setTitle('🔧 Rod Repaired!')
+                    .setDescription(`Your ${rod.name} has been fully repaired!`)
+                    .addFields(
+                        { name: 'Durability', value: createDurabilityBar(maxDurability, maxDurability), inline: true },
+                        { name: 'Cost', value: `${repairCost} coins`, inline: true },
+                        { name: 'Remaining Coins', value: `${player.coins}`, inline: true }
+                    );
+
+                await interaction.editReply({ embeds: [embed] });
             }
 
         } catch (error) {
             console.error('Error in tackle command:', error);
             await interaction.editReply({
-                content: '❌ An error occurred while accessing the tackle shop.',
+                content: '❌ An error occurred while managing fishing equipment.',
                 ephemeral: true
             });
         }
     },
-
-    async showShop(interaction, player) {
-        const embed = new EmbedBuilder()
-            .setColor('#4682B4')
-            .setTitle('🎣 Captain\'s Tackle Shop')
-            .setDescription('**Welcome to the finest fishing equipment store!**\n\n*"Catch the big one with the right gear!"*')
-            .addFields(
-                { name: '💰 Your Coins', value: player.coins.toString(), inline: true },
-                { name: '🎣 Fishing Level', value: player.fishing.level.toString(), inline: true },
-                { name: '🏪 Shop Categories', value: 'Use buttons below to browse', inline: true }
-            )
-            .setFooter({ text: 'Select a category to browse items' })
-            .setTimestamp();
-
-        const buttons = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('shop_rods')
-                    .setLabel('Fishing Rods')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🎣'),
-                new ButtonBuilder()
-                    .setCustomId('shop_bait')
-                    .setLabel('Bait & Lures')
-                    .setStyle(ButtonStyle.Success)
-                    .setEmoji('🪱'),
-                new ButtonBuilder()
-                    .setCustomId('shop_accessories')
-                    .setLabel('Accessories')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('🧰')
-            );
-
-        const response = await interaction.editReply({
-            embeds: [embed],
-            components: [buttons]
-        });
-
-        const filter = i => i.user.id === interaction.user.id;
-        const collector = response.createMessageComponentCollector({ filter, time: 60000 });
-
-        collector.on('collect', async buttonInteraction => {
-            try {
-                const category = buttonInteraction.customId.split('_')[1];
-                await this.showCategory(buttonInteraction, player, category);
-            } catch (error) {
-                console.error('Error in shop button interaction:', error);
-            }
-        });
-    },
-
-    async showCategory(interaction, player, category) {
-        const items = tackleShop[category];
-        const embed = new EmbedBuilder()
-            .setColor('#4682B4')
-            .setTitle(`🏪 ${category.charAt(0).toUpperCase() + category.slice(1)} Shop`)
-            .setDescription(`Browse our selection of ${category}:`)
-            .addFields({ name: '💰 Your Coins', value: player.coins.toString(), inline: true });
-
-        const options = [];
-        Object.entries(items).forEach(([key, item]) => {
-            const canAfford = player.coins >= item.price;
-            const levelReq = player.fishing.level >= item.level;
-            const status = !canAfford ? '💸' : !levelReq ? '🔒' : '✅';
-
-            embed.addFields({
-                name: `${item.emoji} ${item.name} ${status}`,
-                value: `**Price:** ${item.price} coins\n**Level Required:** ${item.level}\n*${item.description}*`,
-                inline: true
-            });
-
-            if (canAfford && levelReq) {
-                options.push({
-                    label: item.name,
-                    description: `${item.price} coins - ${item.description}`,
-                    value: key,
-                    emoji: item.emoji
-                });
-            }
-        });
-
-        const components = [];
-        if (options.length > 0) {
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`buy_${category}`)
-                .setPlaceholder('Select an item to purchase')
-                .addOptions(options);
-
-            components.push(new ActionRowBuilder().addComponents(selectMenu));
-        }
-
-        const backButton = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('back_to_shop')
-                    .setLabel('Back to Shop')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('🔙')
-            );
-
-        components.push(backButton);
-
-        await interaction.update({
-            embeds: [embed],
-            components: components
-        });
-
-        // Handle purchases
-        const filter = i => i.user.id === interaction.user.id;
-        const collector = interaction.message.createMessageComponentCollector({ filter, time: 60000 });
-
-        collector.on('collect', async selectInteraction => {
-            try {
-                if (selectInteraction.customId === 'back_to_shop') {
-                    await this.showShop(selectInteraction, player);
-                    return;
-                }
-
-                if (selectInteraction.customId.startsWith('buy_')) {
-                    const itemKey = selectInteraction.values[0];
-                    await this.purchaseItem(selectInteraction, player, category, itemKey);
-                }
-            } catch (error) {
-                console.error('Error in category interaction:', error);
-            }
-        });
-    },
-
-    async purchaseItem(interaction, player, category, itemKey) {
-        const item = tackleShop[category][itemKey];
-        
-        if (player.coins < item.price) {
-            await interaction.reply({
-                content: '❌ You don\'t have enough coins!',
-                ephemeral: true
-            });
-            return;
-        }
-
-        if (player.fishing.level < item.level) {
-            await interaction.reply({
-                content: `❌ You need fishing level ${item.level} to buy this item!`,
-                ephemeral: true
-            });
-            return;
-        }
-
-        // Process purchase
-        player.coins -= item.price;
-
-        if (category === 'rods') {
-            player.fishing.equipment.rod = itemKey;
-        } else if (category === 'bait') {
-            for (let i = 0; i < item.quantity; i++) {
-                player.fishing.equipment.bait.push(itemKey);
-            }
-        } else if (category === 'accessories') {
-            if (!player.fishing.equipment.accessories.includes(itemKey)) {
-                player.fishing.equipment.accessories.push(itemKey);
-            }
-        }
-
-        await db.updatePlayer(interaction.user.id, player);
-
-        const embed = new EmbedBuilder()
-            .setColor('#00FF00')
-            .setTitle('✅ Purchase Successful!')
-            .setDescription(`You bought **${item.name}**!`)
-            .addFields(
-                { name: 'Cost', value: `${item.price} coins`, inline: true },
-                { name: 'Remaining Coins', value: player.coins.toString(), inline: true }
-            );
-
-        if (category === 'bait') {
-            embed.addFields({ name: 'Quantity', value: item.quantity.toString(), inline: true });
-        }
-
-        await interaction.update({
-            embeds: [embed],
-            components: []
-        });
-    },
-
-    async showInventory(interaction, player) {
-        const embed = new EmbedBuilder()
-            .setColor('#32CD32')
-            .setTitle('🎒 Fishing Equipment Inventory')
-            .setDescription('Your current fishing gear:');
-
-        // Current rod
-        const currentRod = tackleShop.rods[player.fishing.equipment.rod];
-        embed.addFields({
-            name: '🎣 Current Rod',
-            value: `${currentRod.emoji} **${currentRod.name}**\nCatch Bonus: +${Math.floor((currentRod.catchBonus - 1) * 100)}%\nDurability: ${currentRod.durability}`,
-            inline: true
-        });
-
-        // Bait inventory
-        const baitCounts = {};
-        player.fishing.equipment.bait.forEach(bait => {
-            baitCounts[bait] = (baitCounts[bait] || 0) + 1;
-        });
-
-        let baitText = '';
-        if (Object.keys(baitCounts).length === 0) {
-            baitText = 'No bait available';
-        } else {
-            Object.entries(baitCounts).forEach(([baitType, count]) => {
-                const bait = tackleShop.bait[baitType];
-                baitText += `${bait.emoji} ${bait.name}: ${count}\n`;
-            });
-        }
-
-        embed.addFields({
-            name: '🪱 Bait & Lures',
-            value: baitText,
-            inline: true
-        });
-
-        // Accessories
-        let accessoryText = '';
-        if (player.fishing.equipment.accessories.length === 0) {
-            accessoryText = 'No accessories';
-        } else {
-            player.fishing.equipment.accessories.forEach(accessoryKey => {
-                const accessory = tackleShop.accessories[accessoryKey];
-                accessoryText += `${accessory.emoji} ${accessory.name}\n`;
-            });
-        }
-
-        embed.addFields({
-            name: '🧰 Accessories',
-            value: accessoryText,
-            inline: true
-        });
-
-        await interaction.editReply({ embeds: [embed] });
-    },
-
-    async repairItem(interaction, player, itemName) {
-        // Implementation for repairing equipment
-        const embed = new EmbedBuilder()
-            .setColor('#FFA500')
-            .setTitle('🔧 Equipment Repair')
-            .setDescription('Repair functionality coming soon!')
-            .addFields({
-                name: 'Available Soon',
-                value: 'Equipment durability and repair system will be added in a future update.',
-                inline: false
-            });
-
-        await interaction.editReply({ embeds: [embed] });
-    },
-
-    async upgradeItem(interaction, player, itemName) {
-        // Implementation for upgrading equipment
-        const embed = new EmbedBuilder()
-            .setColor('#9932CC')
-            .setTitle('⚡ Equipment Upgrade')
-            .setDescription('Upgrade functionality coming soon!')
-            .addFields({
-                name: 'Available Soon',
-                value: 'Equipment upgrade system will be added in a future update.',
-                inline: false
-            });
-
-        await interaction.editReply({ embeds: [embed] });
-    }
 };
+
+function createDurabilityBar(current, max) {
+    const barLength = 10;
+    const progress = Math.min(Math.max(0, current), max);
+    const filledLength = Math.floor((progress / max) * barLength);
+    const emptyLength = barLength - filledLength;
+    
+    return '🟦'.repeat(filledLength) + '⬜'.repeat(emptyLength);
+}

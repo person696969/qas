@@ -1,4 +1,3 @@
-
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const config = require('../../config.js');
 const db = require('../../database.js');
@@ -103,7 +102,7 @@ const dungeons = {
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('dungeon')
+        .setName('dungeonraid')
         .setDescription('🏰 Explore dangerous dungeons with enhanced mechanics!')
         .addStringOption(option =>
             option.setName('action')
@@ -127,11 +126,11 @@ module.exports = {
                     { name: '🐉 Infernal Dragon Lair', value: 'dragon_lair' },
                     { name: '🌑 Nightmare Void Citadel', value: 'void_citadel' }
                 )),
-    
+
     async execute(interaction) {
         const action = interaction.options?.getString('action') || 'list';
         const dungeonId = interaction.options?.getString('dungeon');
-        
+
         switch (action) {
             case 'explore':
                 await this.exploreDungeon(interaction, dungeonId);
@@ -149,12 +148,12 @@ module.exports = {
                 await this.listDungeons(interaction);
         }
     },
-    
+
     async listDungeons(interaction) {
         const userId = interaction.user.id;
         const userData = await db.getPlayer(userId) || { level: 1, dungeonStats: {} };
         const userLevel = userData.level || 1;
-        
+
         const embed = new EmbedBuilder()
             .setColor('#4B0082')
             .setTitle('🏰 Dungeon Explorer\'s Guild')
@@ -177,13 +176,13 @@ module.exports = {
                     inline: true
                 }
             ]);
-            
+
         // Add dungeon details with enhanced information
         Object.values(dungeons).forEach(dungeon => {
             const canEnter = userLevel >= dungeon.requiredLevel;
             const statusIcon = canEnter ? '✅' : '🔒';
             const completions = userData.dungeonStats?.[dungeon.id] || 0;
-            
+
             embed.addFields([{
                 name: `${dungeon.emoji} ${dungeon.name} ${statusIcon}`,
                 value: `**${dungeon.difficulty}** • Level ${dungeon.requiredLevel}+ Required\n` +
@@ -194,7 +193,7 @@ module.exports = {
                 inline: true
             }]);
         });
-        
+
         const dungeonSelect = new StringSelectMenuBuilder()
             .setCustomId('dungeon_explore_select')
             .setPlaceholder('🗺️ Select a dungeon to explore...')
@@ -210,7 +209,7 @@ module.exports = {
                     };
                 })
             );
-            
+
         const buttons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -230,18 +229,18 @@ module.exports = {
                     .setLabel('🛒 Expedition Shop')
                     .setStyle(ButtonStyle.Secondary)
             );
-            
+
         const components = [
             new ActionRowBuilder().addComponents(dungeonSelect),
             buttons
         ];
-        
+
         await interaction.reply({ embeds: [embed], components });
     },
-    
+
     async exploreDungeon(interaction, dungeonId) {
         const userId = interaction.user.id;
-        
+
         // Check if user is already in a dungeon
         if (interaction.client.activeDungeons?.has(userId)) {
             return interaction.reply({
@@ -249,14 +248,14 @@ module.exports = {
                 ephemeral: true
             });
         }
-        
+
         if (!dungeonId) {
             return interaction.reply({
                 content: '❌ Please select a dungeon to explore!',
                 ephemeral: true
             });
         }
-        
+
         const dungeon = dungeons[dungeonId];
         if (!dungeon) {
             return interaction.reply({
@@ -264,10 +263,10 @@ module.exports = {
                 ephemeral: true
             });
         }
-        
+
         const userData = await db.getPlayer(userId) || { level: 1, health: 100, maxHealth: 100 };
         const userLevel = userData.level || 1;
-        
+
         if (userLevel < dungeon.requiredLevel) {
             const embed = new EmbedBuilder()
                 .setColor('#FF6B6B')
@@ -277,15 +276,15 @@ module.exports = {
                     { name: '💡 Suggestion', value: 'Try easier dungeons first or train your character!', inline: false }
                 ])
                 .setTimestamp();
-                
+
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
-        
+
         // Initialize dungeon exploration
         if (!interaction.client.activeDungeons) {
             interaction.client.activeDungeons = new Map();
         }
-        
+
         const dungeonState = {
             dungeon: dungeon,
             currentFloor: 1,
@@ -301,9 +300,9 @@ module.exports = {
             monstersDefeated: 0,
             hazardsEncountered: 0
         };
-        
+
         interaction.client.activeDungeons.set(userId, dungeonState);
-        
+
         const embed = new EmbedBuilder()
             .setColor(this.getDifficultyColor(dungeon.difficulty))
             .setTitle(`${dungeon.emoji} Entering ${dungeon.name}`)
@@ -343,7 +342,7 @@ module.exports = {
             ])
             .setFooter({ text: 'Choose your actions carefully! Death means losing progress.' })
             .setTimestamp();
-            
+
         const buttons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -367,9 +366,9 @@ module.exports = {
                     .setLabel('🏃 Retreat Safely')
                     .setStyle(ButtonStyle.Danger)
             );
-            
+
         await interaction.reply({ embeds: [embed], components: [buttons] });
-        
+
         // Set timeout for dungeon exploration
         setTimeout(() => {
             if (interaction.client.activeDungeons?.has(userId)) {
@@ -381,11 +380,11 @@ module.exports = {
             }
         }, 1800000); // 30 minutes
     },
-    
+
     async showStats(interaction) {
         const userId = interaction.user.id;
         const userData = await db.getPlayer(userId) || {};
-        
+
         const stats = userData.dungeonStats || {
             totalEntered: 0,
             totalCleared: 0,
@@ -396,7 +395,7 @@ module.exports = {
             secretsDiscovered: 0,
             bossesDefeated: 0
         };
-        
+
         const embed = new EmbedBuilder()
             .setColor('#8A2BE2')
             .setTitle(`🏰 ${interaction.user.displayName}'s Dungeon Chronicles`)
@@ -433,7 +432,7 @@ module.exports = {
                 inline: false
             }
         ]);
-        
+
         // Add mastery badges
         const badges = [];
         if (stats.totalCleared >= 5) badges.push('🥉 **Novice Explorer**');
@@ -441,7 +440,7 @@ module.exports = {
         if (stats.totalCleared >= 50) badges.push('🥇 **Master Explorer**');
         if (stats.rareItemsFound >= 10) badges.push('💎 **Treasure Hunter**');
         if (stats.secretsDiscovered >= 20) badges.push('🔍 **Secret Finder**');
-        
+
         if (badges.length > 0) {
             embed.addFields([
                 {
@@ -451,21 +450,21 @@ module.exports = {
                 }
             ]);
         }
-            
+
         embed.setFooter({ text: 'Keep exploring to unlock more achievements!' })
              .setTimestamp();
-            
+
         await interaction.reply({ embeds: [embed] });
     },
-    
+
     async prepareDungeon(interaction) {
         const userId = interaction.user.id;
         const userData = await db.getPlayer(userId) || { inventory: { items: [], potions: [] } };
-        
+
         const potions = userData.inventory.potions || [];
         const weapons = userData.inventory.items?.filter(item => item.category === 'weapons') || [];
         const armor = userData.inventory.items?.filter(item => item.category === 'armor') || [];
-        
+
         const embed = new EmbedBuilder()
             .setColor('#4169E1')
             .setTitle('🎒 Dungeon Expedition Preparation Center')
@@ -495,7 +494,7 @@ module.exports = {
             ])
             .setFooter({ text: 'Well-prepared adventurers have higher survival rates!' })
             .setTimestamp();
-            
+
         const buttons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -519,7 +518,7 @@ module.exports = {
                     .setLabel('🗺️ Select Dungeon')
                     .setStyle(ButtonStyle.Primary)
             );
-            
+
         await interaction.reply({ embeds: [embed], components: [buttons] });
     },
 
@@ -563,7 +562,7 @@ module.exports = {
 
         await interaction.reply({ embeds: [embed], components: [buttons] });
     },
-    
+
     getDifficultyColor(difficulty) {
         const colors = {
             'Beginner': '#00FF00',
@@ -574,7 +573,7 @@ module.exports = {
         };
         return colors[difficulty] || '#808080';
     },
-    
+
     calculatePower(userData) {
         let power = (userData.level || 1) * 15;
         if (userData.equipment?.weapon) power += 30;

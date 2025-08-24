@@ -1,4 +1,3 @@
-
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const config = require('../../config.js');
 const db = require('../../database.js');
@@ -23,13 +22,13 @@ module.exports = {
             option.setName('daily')
                 .setDescription('Get your personalized daily tip')
                 .setRequired(false)),
-    
+
     async execute(interaction) {
         const category = interaction.options?.getString('category');
         const isDailyTip = interaction.options?.getBoolean('daily');
         const userId = interaction.user.id;
-        
-        const userData = await db.get(`user_${userId}`) || { level: 1, experience: 0 };
+
+        const userData = await db.getPlayer(userId); // Fixed: Use db.getPlayer for consistency
 
         if (isDailyTip) {
             await this.showDailyTip(interaction, userData);
@@ -43,37 +42,37 @@ module.exports = {
     async showTipOverview(interaction, userData) {
         const playerLevel = userData.level || 1;
         const tipCategories = this.getTipCategories();
-        
+
         // Get personalized tip based on player progress
         const personalizedTip = this.getPersonalizedTip(userData);
-        
+
         const embed = new EmbedBuilder()
             .setColor('#32CD32')
             .setTitle('💡 Treasure Hunter\'s Complete Guide')
             .setDescription('**Master the art of treasure hunting!**\n\nLearn from experienced adventurers and become a legendary treasure hunter.')
             .setThumbnail('https://cdn.discordapp.com/attachments/123456789/guide-book.png')
             .addFields([
-                { 
-                    name: '🎯 Your Daily Tip', 
-                    value: `*"${personalizedTip.tip}"*\n\n**Category:** ${personalizedTip.category}\n**Difficulty:** ${personalizedTip.difficulty}`, 
-                    inline: false 
+                {
+                    name: '🎯 Your Daily Tip',
+                    value: `*"${personalizedTip.tip}"*\n\n**Category:** ${personalizedTip.category}\n**Difficulty:** ${personalizedTip.difficulty}`,
+                    inline: false
                 },
-                { 
-                    name: '📚 Available Guides', 
-                    value: tipCategories.map(cat => 
+                {
+                    name: '📚 Available Guides',
+                    value: tipCategories.map(cat =>
                         `${cat.emoji} **${cat.name}** (${cat.tips.length} tips)\n└ ${cat.description}`
-                    ).join('\n\n'), 
-                    inline: false 
+                    ).join('\n\n'),
+                    inline: false
                 },
-                { 
-                    name: '📊 Your Progress', 
-                    value: `**Level:** ${playerLevel}\n**Experience:** ${userData.experience || 0}\n**Skill Rating:** ${this.getSkillRating(userData)}`, 
-                    inline: true 
+                {
+                    name: '📊 Your Progress',
+                    value: `**Level:** ${playerLevel}\n**Experience:** ${userData.experience || 0}\n**Skill Rating:** ${this.getSkillRating(userData)}`,
+                    inline: true
                 },
-                { 
-                    name: '🏆 Recommended Focus', 
-                    value: this.getRecommendedFocus(userData), 
-                    inline: true 
+                {
+                    name: '🏆 Recommended Focus',
+                    value: this.getRecommendedFocus(userData),
+                    inline: true
                 }
             ])
             .setFooter({ text: 'Select a category below to dive deeper into specific strategies!' })
@@ -115,8 +114,8 @@ module.exports = {
                     .setEmoji('❓')
             );
 
-        await interaction.reply({ 
-            embeds: [embed], 
+        await interaction.reply({
+            embeds: [embed],
             components: [
                 new ActionRowBuilder().addComponents(categorySelect),
                 actionButtons
@@ -138,7 +137,7 @@ module.exports = {
 
         // Add tips in organized sections
         categoryData.sections.forEach(section => {
-            const tipList = section.tips.map((tip, index) => 
+            const tipList = section.tips.map((tip, index) =>
                 `**${index + 1}.** ${tip.title}\n${tip.description}${tip.example ? `\n*Example: ${tip.example}*` : ''}`
             ).join('\n\n');
 
@@ -151,15 +150,15 @@ module.exports = {
 
         // Add difficulty rating and prerequisites
         embed.addFields([
-            { 
-                name: '📊 Difficulty Level', 
-                value: `${this.getDifficultyStars(categoryData.difficulty)} ${categoryData.difficulty}\n**Prerequisites:** ${categoryData.prerequisites}`, 
-                inline: true 
+            {
+                name: '📊 Difficulty Level',
+                value: `${this.getDifficultyStars(categoryData.difficulty)} ${categoryData.difficulty}\n**Prerequisites:** ${categoryData.prerequisites}`,
+                inline: true
             },
-            { 
-                name: '⏱️ Time to Master', 
-                value: `**Estimated:** ${categoryData.timeToMaster}\n**Practice Needed:** ${categoryData.practiceNeeded}`, 
-                inline: true 
+            {
+                name: '⏱️ Time to Master',
+                value: `**Estimated:** ${categoryData.timeToMaster}\n**Practice Needed:** ${categoryData.practiceNeeded}`,
+                inline: true
             }
         ]);
 
@@ -190,36 +189,36 @@ module.exports = {
 
     async showDailyTip(interaction, userData) {
         const dailyTip = this.getDailyTip(userData, new Date());
-        
+
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
             .setTitle('⭐ Your Personalized Daily Tip')
             .setDescription(`**Based on your Level ${userData.level || 1} progress**\n\nTailored advice to help you improve today!`)
             .addFields([
-                { 
-                    name: `${dailyTip.category.emoji} ${dailyTip.category.name}`, 
-                    value: `*"${dailyTip.tip}"*`, 
-                    inline: false 
+                {
+                    name: `${dailyTip.category.emoji} ${dailyTip.category.name}`,
+                    value: `*"${dailyTip.tip}"*`,
+                    inline: false
                 },
-                { 
-                    name: '🎯 Why This Matters', 
-                    value: dailyTip.explanation, 
-                    inline: false 
+                {
+                    name: '🎯 Why This Matters',
+                    value: dailyTip.explanation,
+                    inline: false
                 },
-                { 
-                    name: '📋 Action Steps', 
-                    value: dailyTip.actionSteps.map((step, i) => `**${i + 1}.** ${step}`).join('\n'), 
-                    inline: false 
+                {
+                    name: '📋 Action Steps',
+                    value: dailyTip.actionSteps.map((step, i) => `**${i + 1}.** ${step}`).join('\n'),
+                    inline: false
                 },
-                { 
-                    name: '🏆 Expected Results', 
-                    value: dailyTip.expectedResults, 
-                    inline: true 
+                {
+                    name: '🏆 Expected Results',
+                    value: dailyTip.expectedResults,
+                    inline: true
                 },
-                { 
-                    name: '⏰ Time Investment', 
-                    value: dailyTip.timeRequired, 
-                    inline: true 
+                {
+                    name: '⏰ Time Investment',
+                    value: dailyTip.timeRequired,
+                    inline: true
                 }
             ])
             .setFooter({ text: 'Come back tomorrow for a new personalized tip!' })
@@ -410,7 +409,7 @@ module.exports = {
     getPersonalizedTip(userData) {
         const level = userData.level || 1;
         const experience = userData.experience || 0;
-        
+
         // Logic to determine appropriate tip based on player progress
         if (level < 5) {
             return {
@@ -436,7 +435,7 @@ module.exports = {
     getDailyTip(userData, date) {
         // Generate consistent daily tip based on user data and date
         const tipIndex = (date.getDate() + (userData.level || 1)) % 30;
-        
+
         return {
             tip: "Focus on completing daily challenges to maximize your experience gain.",
             category: { name: "Daily Optimization", emoji: "⭐" },

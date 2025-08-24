@@ -1,4 +1,3 @@
-
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const config = require('../../config.js');
 const db = require('../../database.js');
@@ -56,11 +55,11 @@ module.exports = {
                             { name: 'Unsubscribe All', value: 'unsubscribe_all' },
                             { name: 'Custom Settings', value: 'custom' }
                         ))),
-    
+
     async execute(interaction) {
         const subcommand = interaction.options.getSubcommand();
         const userId = interaction.user.id;
-        
+
         try {
             switch (subcommand) {
                 case 'view':
@@ -181,9 +180,9 @@ module.exports = {
     async handleRemind(interaction, userId) {
         const eventName = interaction.options.getString('event');
         const minutes = interaction.options.getInteger('minutes') || 30;
-        
+
         const userProfile = await db.getUser(userId) || { reminders: [] };
-        
+
         const reminder = {
             id: Date.now(),
             event: eventName,

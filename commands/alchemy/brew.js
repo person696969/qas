@@ -1,747 +1,470 @@
-
-const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder, ComponentType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType } = require('discord.js');
+const config = require('../../config.js');
 const db = require('../../database.js');
-
-// Enhanced brewing recipes with detailed information
-const brewingCategories = {
-    beverages: {
-        name: '🍺 Magical Beverages',
-        emoji: '🍺',
-        description: 'Craft refreshing magical drinks',
-        recipes: {
-            ale: { 
-                name: 'Enchanted Ale', 
-                ingredients: { wheat: 3, hops: 2, water: 1 }, 
-                effect: 'Charisma +10%', 
-                duration: 1800, 
-                cost: 100,
-                level: 1,
-                exp: 15,
-                description: 'A magical brew that enhances social abilities',
-                rarity: 'Common',
-                alcohol: 5
-            },
-            wine: { 
-                name: 'Elven Wine', 
-                ingredients: { grape: 5, moonwater: 2, essence: 1 }, 
-                effect: 'Wisdom +15%', 
-                duration: 2400, 
-                cost: 250,
-                level: 5,
-                exp: 30,
-                description: 'A sophisticated wine favored by elves',
-                rarity: 'Uncommon',
-                alcohol: 12
-            },
-            mead: { 
-                name: 'Dragon Mead', 
-                ingredients: { honey: 4, dragon_essence: 1, fire_flower: 2 }, 
-                effect: 'Strength +20%', 
-                duration: 3600, 
-                cost: 500,
-                level: 10,
-                exp: 60,
-                description: 'A potent mead infused with dragon magic',
-                rarity: 'Rare',
-                alcohol: 18
-            }
-        }
-    },
-    elixirs: {
-        name: '⚗️ Magical Elixirs',
-        emoji: '⚗️',
-        description: 'Brew powerful magical elixirs',
-        recipes: {
-            clarity: { 
-                name: 'Elixir of Clarity', 
-                ingredients: { crystal: 2, sage: 3, pure_water: 1 }, 
-                effect: 'Mental clarity boost', 
-                duration: 7200, 
-                cost: 300,
-                level: 6,
-                exp: 40,
-                description: 'Clears the mind and enhances focus',
-                rarity: 'Uncommon',
-                alcohol: 0
-            },
-            courage: { 
-                name: 'Elixir of Courage', 
-                ingredients: { lion_heart: 1, bravery_herb: 3, golden_water: 2 }, 
-                effect: 'Fear immunity', 
-                duration: 1800, 
-                cost: 400,
-                level: 8,
-                exp: 50,
-                description: 'Grants immunity to fear effects',
-                rarity: 'Rare',
-                alcohol: 0
-            },
-            vitality: { 
-                name: 'Elixir of Vitality', 
-                ingredients: { life_essence: 2, healing_herb: 4, spring_water: 3 }, 
-                effect: 'Health regeneration', 
-                duration: 3600, 
-                cost: 600,
-                level: 12,
-                exp: 75,
-                description: 'Continuously regenerates health over time',
-                rarity: 'Epic',
-                alcohol: 0
-            }
-        }
-    },
-    tonics: {
-        name: '🧪 Restorative Tonics',
-        emoji: '🧪',
-        description: 'Create healing and restorative tonics',
-        recipes: {
-            energy: { 
-                name: 'Energy Tonic', 
-                ingredients: { ginseng: 2, honey: 1, sparkling_water: 2 }, 
-                effect: 'Energy +50%', 
-                duration: 1200, 
-                cost: 150,
-                level: 3,
-                exp: 20,
-                description: 'Restores energy and reduces fatigue',
-                rarity: 'Common',
-                alcohol: 0
-            },
-            rejuvenation: { 
-                name: 'Rejuvenation Tonic', 
-                ingredients: { phoenix_feather: 1, youth_berry: 3, eternal_spring: 1 }, 
-                effect: 'Age reversal', 
-                duration: 86400, 
-                cost: 800,
-                level: 15,
-                exp: 100,
-                description: 'Temporarily reverses aging effects',
-                rarity: 'Legendary',
-                alcohol: 0
-            },
-            purification: { 
-                name: 'Purification Tonic', 
-                ingredients: { holy_water: 2, cleansing_salt: 1, white_sage: 3 }, 
-                effect: 'Removes all debuffs', 
-                duration: 0, 
-                cost: 350,
-                level: 7,
-                exp: 45,
-                description: 'Cleanses all negative effects instantly',
-                rarity: 'Rare',
-                alcohol: 0
-            }
-        }
-    },
-    experimental: {
-        name: '🌟 Experimental Brews',
-        emoji: '🌟',
-        description: 'Dangerous and powerful experimental concoctions',
-        recipes: {
-            mutation: {
-                name: 'Mutation Serum',
-                ingredients: { chaos_essence: 1, unstable_compound: 2, void_water: 1 },
-                effect: 'Random stat changes',
-                duration: 3600,
-                cost: 1000,
-                level: 20,
-                exp: 150,
-                description: 'Unpredictable effects on the drinker',
-                rarity: 'Legendary',
-                alcohol: 0
-            },
-            timeshift: {
-                name: 'Timeshift Brew',
-                ingredients: { temporal_crystal: 1, time_flower: 3, chronos_water: 2 },
-                effect: 'Time manipulation',
-                duration: 600,
-                cost: 1500,
-                level: 25,
-                exp: 200,
-                description: 'Briefly manipulates the flow of time',
-                rarity: 'Mythic',
-                alcohol: 0
-            }
-        }
-    }
-};
-
-// Rarity colors for embeds
-const rarityColors = {
-    'Common': '#808080',
-    'Uncommon': '#00FF00',
-    'Rare': '#0080FF',
-    'Epic': '#8000FF',
-    'Legendary': '#FFD700',
-    'Mythic': '#FF1493'
-};
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('brew')
-        .setDescription('🍺 Create magical beverages, elixirs, and experimental brews'),
-
+        .setDescription('🧪 Brew magical potions using gathered ingredients'),
+    
     async execute(interaction) {
         const userId = interaction.user.id;
-
+        
         try {
-            // Get user profile
-            let player = await db.getPlayer(userId);
-            if (!player) {
-                await interaction.reply({
-                    content: '❌ You need to create a profile first! Use `/profile` to get started.',
-                    ephemeral: true
-                });
-                return;
+            // Get user profile with comprehensive error handling
+            let userProfile = await db.getPlayer(userId);
+            if (!userProfile) {
+                userProfile = {
+                    inventory: { coins: 100 },
+                    stats: { level: 1, experience: 0 },
+                    items: {},
+                    skills: { alchemy: 1 }
+                };
+                await db.updatePlayer(userId, userProfile);
             }
 
-            // Helper functions
-            const getPlayerBrewingLevel = () => {
-                return player.skills?.brewing?.level || player.skills?.brewing || 1;
-            };
-
-            const getPlayerBrewingExp = () => {
-                return player.skills?.brewing?.exp || player.skillExperience?.brewing || 0;
-            };
-
-            const hasRequiredMaterials = (recipe, amount = 1) => {
-                for (const [material, required] of Object.entries(recipe.ingredients)) {
-                    const playerAmount = player.inventory?.materials?.[material] || player.items?.[material] || 0;
-                    if (playerAmount < required * amount) {
-                        return false;
-                    }
+            // Enhanced potion recipes with more detailed requirements
+            const potionRecipes = [
+                { 
+                    id: 'health_potion',
+                    name: 'Health Potion', 
+                    cost: 50, 
+                    ingredients: [
+                        { name: 'Healing Herb', key: 'healing_herb', required: 2 },
+                        { name: 'Pure Water', key: 'pure_water', required: 1 }
+                    ], 
+                    effect: '+50 HP',
+                    emoji: '❤️',
+                    description: 'Restores health instantly',
+                    successRate: 85,
+                    expReward: 10
+                },
+                { 
+                    id: 'mana_potion',
+                    name: 'Mana Potion', 
+                    cost: 75, 
+                    ingredients: [
+                        { name: 'Mana Crystal', key: 'mana_crystal', required: 1 },
+                        { name: 'Moonwater', key: 'moonwater', required: 2 }
+                    ], 
+                    effect: '+30 MP',
+                    emoji: '💙',
+                    description: 'Restores magical energy',
+                    successRate: 80,
+                    expReward: 15
+                },
+                { 
+                    id: 'strength_potion',
+                    name: 'Strength Potion', 
+                    cost: 100, 
+                    ingredients: [
+                        { name: 'Dragon Scale', key: 'dragon_scale', required: 1 },
+                        { name: 'Fire Essence', key: 'fire_essence', required: 3 }
+                    ], 
+                    effect: '+10 STR (30min)',
+                    emoji: '💪',
+                    description: 'Temporarily boosts physical power',
+                    successRate: 70,
+                    expReward: 25
+                },
+                { 
+                    id: 'speed_potion',
+                    name: 'Speed Potion', 
+                    cost: 80, 
+                    ingredients: [
+                        { name: 'Wind Feather', key: 'wind_feather', required: 2 },
+                        { name: 'Quicksilver', key: 'quicksilver', required: 1 }
+                    ], 
+                    effect: '+5 SPD (20min)',
+                    emoji: '💨',
+                    description: 'Increases movement and reaction speed',
+                    successRate: 75,
+                    expReward: 20
                 }
-                return true;
-            };
+            ];
 
-            const getMissingMaterials = (recipe, amount = 1) => {
-                const missing = [];
-                for (const [material, required] of Object.entries(recipe.ingredients)) {
-                    const playerAmount = player.inventory?.materials?.[material] || player.items?.[material] || 0;
-                    const totalRequired = required * amount;
-                    if (playerAmount < totalRequired) {
-                        missing.push({
-                            name: material,
-                            have: playerAmount,
-                            need: totalRequired,
-                            missing: totalRequired - playerAmount
-                        });
-                    }
-                }
-                return missing;
-            };
+            // Helper function to check if user has required ingredients
+            function hasRequiredIngredients(recipe, userItems) {
+                return recipe.ingredients.every(ingredient => {
+                    const userAmount = userItems[ingredient.key] || 0;
+                    return userAmount >= ingredient.required;
+                });
+            }
 
-            const canBrewDrink = (recipe, amount = 1) => {
-                const brewingLevel = getPlayerBrewingLevel();
-                const hasLevel = brewingLevel >= recipe.level;
-                const hasMaterials = hasRequiredMaterials(recipe, amount);
-                const hasCoins = (player.coins || 0) >= (recipe.cost * amount);
-                return hasLevel && hasMaterials && hasCoins;
-            };
+            // Helper function to get ingredient status display
+            function getIngredientStatus(recipe, userItems) {
+                return recipe.ingredients.map(ingredient => {
+                    const userAmount = userItems[ingredient.key] || 0;
+                    const hasEnough = userAmount >= ingredient.required;
+                    const status = hasEnough ? '✅' : '❌';
+                    return `${status} ${ingredient.name}: ${userAmount}/${ingredient.required}`;
+                }).join('\n');
+            }
 
-            // Create main menu embed
-            const createMainMenuEmbed = () => {
+            // Create main embed
+            const createMainEmbed = () => {
                 const embed = new EmbedBuilder()
-                    .setColor('#8B4513')
-                    .setTitle('🍺 Master Brewer\'s Workshop')
-                    .setDescription('*Welcome to the finest brewing establishment in the realm!*\n\nSelect a category to explore available brewing recipes.')
+                    .setColor('#9932CC')
+                    .setTitle('🧪 Master Alchemist\'s Laboratory')
+                    .setDescription(`**Welcome to the mystical brewing chamber!**\n\n*Combine ingredients to create powerful potions that will aid your adventures.*`)
                     .addFields(
-                        {
-                            name: '👤 Your Brewing Stats',
-                            value: `**Level:** ${getPlayerBrewingLevel()}\n**Experience:** ${getPlayerBrewingExp()} XP\n**Next Level:** ${(getPlayerBrewingLevel() * 100) - getPlayerBrewingExp()} XP`,
-                            inline: true
+                        { 
+                            name: '📊 Your Alchemy Stats', 
+                            value: `**Level:** ${userProfile.skills?.alchemy || 1}\n**Experience:** ${userProfile.skillExperience?.alchemy || 0} XP`, 
+                            inline: true 
                         },
-                        {
-                            name: '💰 Resources',
-                            value: `**Coins:** ${player.coins || 0}\n**Drinks Brewed:** ${player.drinksBrewed || 0}`,
-                            inline: true
+                        { 
+                            name: '💰 Resources', 
+                            value: `**Coins:** ${userProfile.coins || 0}\n**Potions Crafted:** ${userProfile.potionsCrafted || 0}`, 
+                            inline: true 
                         },
-                        {
-                            name: '🎯 Categories Available',
-                            value: Object.keys(brewingCategories).length.toString(),
-                            inline: true
-                        }
+                        { name: '\u200B', value: '\u200B', inline: true }
                     )
-                    .setFooter({ text: 'Choose a category to see available recipes' })
+                    .setFooter({ text: 'Select a potion to view details and requirements' })
                     .setTimestamp();
 
-                return embed;
-            };
+                // Add potion overview
+                const potionsList = potionRecipes.map(recipe => {
+                    const canBrew = hasRequiredIngredients(recipe, userProfile.items || {}) && 
+                                   (userProfile.coins || 0) >= recipe.cost;
+                    const status = canBrew ? '✅ Ready to brew' : '❌ Missing requirements';
+                    return `${recipe.emoji} **${recipe.name}** - ${status}`;
+                }).join('\n');
 
-            // Create category selection menu
-            const createCategoryMenu = () => {
-                const options = Object.entries(brewingCategories).map(([key, category]) => ({
-                    label: category.name,
-                    description: category.description,
-                    value: key,
-                    emoji: category.emoji
-                }));
-
-                return new StringSelectMenuBuilder()
-                    .setCustomId('select_brew_category')
-                    .setPlaceholder('Choose a brewing category...')
-                    .addOptions(options);
-            };
-
-            // Create category embed
-            const createCategoryEmbed = (categoryKey) => {
-                const category = brewingCategories[categoryKey];
-                const brewingLevel = getPlayerBrewingLevel();
-
-                const embed = new EmbedBuilder()
-                    .setColor('#8B4513')
-                    .setTitle(`${category.emoji} ${category.name}`)
-                    .setDescription(`*${category.description}*\n\nSelect a drink to brew or view details.`)
-                    .setFooter({ text: `Your Brewing Level: ${brewingLevel} | Available recipes: ${Object.keys(category.recipes).length}` });
-
-                // Add recipe overview
-                const recipeList = Object.entries(category.recipes).map(([key, recipe]) => {
-                    const canBrew = canBrewDrink(recipe, 1);
-                    const levelReq = recipe.level <= brewingLevel ? '✅' : '❌';
-                    const status = canBrew ? '🟢 Ready' : '🔴 Missing requirements';
-                    const alcoholLevel = recipe.alcohol > 0 ? ` • ${recipe.alcohol}% ABV` : ' • Non-alcoholic';
-                    
-                    return `${levelReq} **${recipe.name}** (Lv.${recipe.level})\n└ ${status} • ${recipe.rarity}${alcoholLevel}`;
-                }).join('\n\n');
-
-                embed.addFields({
-                    name: '📜 Available Recipes',
-                    value: recipeList || 'No recipes available',
-                    inline: false
-                });
+                embed.addFields({ name: '🍯 Available Recipes', value: potionsList });
 
                 return embed;
             };
 
-            // Create drink detail embed
-            const createDrinkDetailEmbed = (categoryKey, drinkKey, amount = 1) => {
-                const category = brewingCategories[categoryKey];
-                const recipe = category.recipes[drinkKey];
-                const canBrew = canBrewDrink(recipe, amount);
-                const missingMaterials = getMissingMaterials(recipe, amount);
-                const brewingLevel = getPlayerBrewingLevel();
-
+            // Create detail embed for specific potion
+            const createDetailEmbed = (recipe) => {
+                const userItems = userProfile.items || {};
+                const canBrew = hasRequiredIngredients(recipe, userItems) && 
+                               (userProfile.coins || 0) >= recipe.cost;
+                
                 const embed = new EmbedBuilder()
-                    .setColor(rarityColors[recipe.rarity] || '#8B4513')
-                    .setTitle(`${category.emoji} ${recipe.name}`)
+                    .setColor(canBrew ? '#00FF00' : '#FF6B6B')
+                    .setTitle(`${recipe.emoji} ${recipe.name}`)
                     .setDescription(`*${recipe.description}*`)
                     .addFields(
-                        {
-                            name: '🏷️ Recipe Information',
-                            value: `**Rarity:** ${recipe.rarity}\n**Required Level:** ${recipe.level}\n**Your Level:** ${brewingLevel}`,
-                            inline: true
+                        { 
+                            name: '💫 Effects', 
+                            value: recipe.effect, 
+                            inline: true 
+                        },
+                        { 
+                            name: '💰 Cost', 
+                            value: `${recipe.cost} coins`, 
+                            inline: true 
+                        },
+                        { 
+                            name: '🎯 Success Rate', 
+                            value: `${recipe.successRate}%`, 
+                            inline: true 
                         },
                         {
-                            name: '💰 Costs',
-                            value: `**Per Drink:** ${recipe.cost} coins\n**Total Cost:** ${recipe.cost * amount} coins`,
+                            name: '🧪 Required Ingredients',
+                            value: getIngredientStatus(recipe, userItems),
+                            inline: false
+                        },
+                        {
+                            name: '⚡ Rewards',
+                            value: `**XP Gained:** ${recipe.expReward}\n**Brewing Level Required:** ${Math.floor(recipe.cost / 50)}`,
                             inline: true
                         }
                     );
 
-                // Add alcohol content if applicable
-                if (recipe.alcohol > 0) {
-                    embed.addFields({
-                        name: '🍺 Alcohol Content',
-                        value: `**ABV:** ${recipe.alcohol}%\n**Type:** Alcoholic Beverage`,
-                        inline: true
-                    });
-                }
-
-                // Add effect information
-                embed.addFields({
-                    name: '⚡ Effect',
-                    value: `**Effect:** ${recipe.effect}\n**Duration:** ${recipe.duration > 0 ? Math.floor(recipe.duration / 60) + ' minutes' : 'Instant'}`,
-                    inline: true
-                });
-
-                // Add ingredients list
-                const ingredientsList = Object.entries(recipe.ingredients).map(([material, required]) => {
-                    const playerAmount = player.inventory?.materials?.[material] || player.items?.[material] || 0;
-                    const totalRequired = required * amount;
-                    const hasEnough = playerAmount >= totalRequired;
-                    const status = hasEnough ? '✅' : '❌';
-                    return `${status} **${material}**: ${playerAmount}/${totalRequired}`;
-                }).join('\n');
-
-                embed.addFields({
-                    name: '🧪 Required Ingredients',
-                    value: ingredientsList,
-                    inline: false
-                });
-
-                // Add experience reward
-                embed.addFields({
-                    name: '📈 Rewards',
-                    value: `**Experience:** ${recipe.exp * amount} XP\n**Brewing Level:** ${recipe.level} required`,
-                    inline: true
-                });
-
-                // Add missing requirements if any
                 if (!canBrew) {
+                    const missingItems = recipe.ingredients.filter(ingredient => 
+                        (userItems[ingredient.key] || 0) < ingredient.required
+                    );
+                    const insufficientFunds = (userProfile.coins || 0) < recipe.cost;
+                    
                     let missingText = '';
-                    
-                    if (brewingLevel < recipe.level) {
-                        missingText += `❌ **Level Requirement:** Need level ${recipe.level} (currently ${brewingLevel})\n`;
+                    if (missingItems.length > 0) {
+                        missingText += `**Missing Ingredients:**\n${missingItems.map(item => 
+                            `• ${item.name}: Need ${item.required - (userItems[item.key] || 0)} more`
+                        ).join('\n')}`;
+                    }
+                    if (insufficientFunds) {
+                        missingText += `${missingText ? '\n\n' : ''}**Insufficient Funds:**\nNeed ${recipe.cost - (userProfile.coins || 0)} more coins`;
                     }
                     
-                    if (missingMaterials.length > 0) {
-                        missingText += `❌ **Missing Materials:**\n${missingMaterials.map(m => 
-                            `• ${m.name}: need ${m.missing} more`
-                        ).join('\n')}\n`;
-                    }
-                    
-                    const totalCost = recipe.cost * amount;
-                    if ((player.coins || 0) < totalCost) {
-                        missingText += `❌ **Insufficient Funds:** Need ${totalCost - (player.coins || 0)} more coins`;
-                    }
-
-                    if (missingText) {
-                        embed.addFields({
-                            name: '⚠️ Requirements Not Met',
-                            value: missingText,
-                            inline: false
-                        });
-                    }
+                    embed.addFields({ name: '⚠️ Requirements Not Met', value: missingText });
                 }
 
                 return embed;
             };
 
-            // Create brewing buttons
-            const createBrewingButtons = (categoryKey, drinkKey, amount = 1) => {
-                const recipe = brewingCategories[categoryKey].recipes[drinkKey];
-                const canBrew = canBrewDrink(recipe, amount);
-
-                const buttons = [];
+            // Create action buttons
+            const createActionButtons = (selectedRecipe = null) => {
+                const components = [];
                 
-                // Amount adjustment buttons
-                if (amount > 1) {
-                    buttons.push(
+                if (!selectedRecipe) {
+                    // Main menu buttons - show recipe selection
+                    const recipeButtons = potionRecipes.map(recipe => 
                         new ButtonBuilder()
-                            .setCustomId(`brew_amount_decrease_${categoryKey}_${drinkKey}_${amount}`)
-                            .setLabel('-1')
+                            .setCustomId(`view_recipe_${recipe.id}`)
+                            .setLabel(recipe.name)
                             .setStyle(ButtonStyle.Secondary)
-                            .setEmoji('➖')
+                            .setEmoji(recipe.emoji)
                     );
-                }
-
-                // Current amount display button (disabled)
-                buttons.push(
-                    new ButtonBuilder()
-                        .setCustomId('brew_amount_display')
-                        .setLabel(`Amount: ${amount}`)
+                    
+                    // Split into rows of 2
+                    for (let i = 0; i < recipeButtons.length; i += 2) {
+                        const row = new ActionRowBuilder().addComponents(
+                            recipeButtons.slice(i, i + 2)
+                        );
+                        components.push(row);
+                    }
+                } else {
+                    // Detail view buttons
+                    const userItems = userProfile.items || {};
+                    const canBrew = hasRequiredIngredients(selectedRecipe, userItems) && 
+                                   (userProfile.coins || 0) >= selectedRecipe.cost;
+                    
+                    const brewButton = new ButtonBuilder()
+                        .setCustomId(`brew_${selectedRecipe.id}`)
+                        .setLabel(`Brew ${selectedRecipe.name}`)
+                        .setStyle(canBrew ? ButtonStyle.Success : ButtonStyle.Danger)
+                        .setEmoji('🧪')
+                        .setDisabled(!canBrew);
+                    
+                    const backButton = new ButtonBuilder()
+                        .setCustomId('back_to_main')
+                        .setLabel('Back to Recipes')
                         .setStyle(ButtonStyle.Secondary)
-                        .setDisabled(true)
-                );
-
-                if (amount < 10) {
-                    buttons.push(
-                        new ButtonBuilder()
-                            .setCustomId(`brew_amount_increase_${categoryKey}_${drinkKey}_${amount}`)
-                            .setLabel('+1')
-                            .setStyle(ButtonStyle.Secondary)
-                            .setEmoji('➕')
+                        .setEmoji('↩️');
+                    
+                    const infoButton = new ButtonBuilder()
+                        .setCustomId('brewing_tips')
+                        .setLabel('Brewing Tips')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('💡');
+                    
+                    components.push(
+                        new ActionRowBuilder().addComponents(brewButton, backButton, infoButton)
                     );
                 }
-
-                const row1 = new ActionRowBuilder().addComponents(buttons);
-
-                // Action buttons
-                const brewButton = new ButtonBuilder()
-                    .setCustomId(`brew_drink_${categoryKey}_${drinkKey}_${amount}`)
-                    .setLabel(`Brew ${amount}x ${recipe.name}`)
-                    .setStyle(canBrew ? ButtonStyle.Success : ButtonStyle.Danger)
-                    .setEmoji('🍺')
-                    .setDisabled(!canBrew);
-
-                const backButton = new ButtonBuilder()
-                    .setCustomId(`brew_back_to_category_${categoryKey}`)
-                    .setLabel('Back to Category')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('↩️');
-
-                const mainMenuButton = new ButtonBuilder()
-                    .setCustomId('brew_back_to_main')
-                    .setLabel('Main Menu')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🏠');
-
-                const row2 = new ActionRowBuilder().addComponents(brewButton, backButton, mainMenuButton);
-
-                return [row1, row2];
+                
+                return components;
             };
 
             // Send initial response
-            const mainEmbed = createMainMenuEmbed();
-            const categoryMenu = createCategoryMenu();
-            const menuRow = new ActionRowBuilder().addComponents(categoryMenu);
-
-            const response = await interaction.reply({
-                embeds: [mainEmbed],
-                components: [menuRow]
+            const mainEmbed = createMainEmbed();
+            const mainComponents = createActionButtons();
+            
+            const response = await interaction.reply({ 
+                embeds: [mainEmbed], 
+                components: mainComponents,
+                ephemeral: false
             });
 
-            // Create collector for interactions
+            // Create collector for button interactions
             const collector = response.createMessageComponentCollector({
+                componentType: ComponentType.Button,
                 time: 300000 // 5 minutes
             });
 
-            collector.on('collect', async (componentInteraction) => {
-                // Check if the user is the same as the command user
-                if (componentInteraction.user.id !== userId) {
-                    return componentInteraction.reply({
-                        content: '❌ You cannot interact with someone else\'s brewing session!',
-                        ephemeral: true
+            collector.on('collect', async (buttonInteraction) => {
+                // Check if the user who clicked is the same as the command user
+                if (buttonInteraction.user.id !== userId) {
+                    return buttonInteraction.reply({ 
+                        content: '❌ You cannot interact with someone else\'s brewing session!', 
+                        ephemeral: true 
                     });
                 }
 
                 try {
-                    await componentInteraction.deferUpdate();
+                    await buttonInteraction.deferUpdate();
                     
-                    // Refresh player data
-                    player = await db.getPlayer(userId) || player;
+                    // Get fresh user data for each interaction
+                    userProfile = await db.getPlayer(userId) || userProfile;
 
-                    if (componentInteraction.customId === 'brew_back_to_main') {
+                    if (buttonInteraction.customId === 'back_to_main') {
                         // Return to main menu
-                        const embed = createMainMenuEmbed();
-                        const menu = createCategoryMenu();
-                        const row = new ActionRowBuilder().addComponents(menu);
+                        const embed = createMainEmbed();
+                        const components = createActionButtons();
+                        await buttonInteraction.editReply({ embeds: [embed], components });
                         
-                        await componentInteraction.editReply({
-                            embeds: [embed],
-                            components: [row]
-                        });
-
-                    } else if (componentInteraction.customId === 'select_brew_category') {
-                        // Show category recipes
-                        const categoryKey = componentInteraction.values[0];
-                        const embed = createCategoryEmbed(categoryKey);
-                        
-                        // Create recipe selection menu
-                        const recipes = brewingCategories[categoryKey].recipes;
-                        const recipeOptions = Object.entries(recipes).map(([key, recipe]) => {
-                            const canBrew = canBrewDrink(recipe, 1);
-                            const brewingLevel = getPlayerBrewingLevel();
-                            
-                            return {
-                                label: recipe.name,
-                                description: `${recipe.rarity} • Lv.${recipe.level} • ${recipe.cost} coins`,
-                                value: `${categoryKey}_${key}`,
-                                emoji: canBrew ? '✅' : (brewingLevel < recipe.level ? '🔒' : '❌')
-                            };
-                        });
-
-                        const recipeMenu = new StringSelectMenuBuilder()
-                            .setCustomId('select_brew_recipe')
-                            .setPlaceholder('Choose a recipe to brew...')
-                            .addOptions(recipeOptions);
+                    } else if (buttonInteraction.customId === 'brewing_tips') {
+                        // Show brewing tips
+                        const tipsEmbed = new EmbedBuilder()
+                            .setColor('#FFD700')
+                            .setTitle('💡 Master Alchemist\'s Tips')
+                            .setDescription('*Wisdom from years of brewing experience*')
+                            .addFields(
+                                {
+                                    name: '🎯 Success Rates',
+                                    value: 'Higher alchemy level increases success rates!\nRare ingredients have lower success rates but better rewards.',
+                                    inline: false
+                                },
+                                {
+                                    name: '📈 Leveling Up',
+                                    value: 'Gain experience by successfully brewing potions.\nFailed attempts still give 25% experience.',
+                                    inline: false
+                                },
+                                {
+                                    name: '🛍️ Ingredient Sources',
+                                    value: '• Gather from exploration commands\n• Purchase from traveling merchants\n• Receive as quest rewards\n• Trade with other players',
+                                    inline: false
+                                }
+                            )
+                            .setFooter({ text: 'Happy brewing! 🧪' });
 
                         const backButton = new ButtonBuilder()
-                            .setCustomId('brew_back_to_main')
-                            .setLabel('Back to Main Menu')
+                            .setCustomId('back_to_main')
+                            .setLabel('Back to Laboratory')
                             .setStyle(ButtonStyle.Secondary)
                             .setEmoji('↩️');
 
-                        await componentInteraction.editReply({
-                            embeds: [embed],
-                            components: [
-                                new ActionRowBuilder().addComponents(recipeMenu),
-                                new ActionRowBuilder().addComponents(backButton)
-                            ]
+                        await buttonInteraction.editReply({ 
+                            embeds: [tipsEmbed], 
+                            components: [new ActionRowBuilder().addComponents(backButton)]
                         });
-
-                    } else if (componentInteraction.customId === 'select_brew_recipe') {
-                        // Show recipe details
-                        const [categoryKey, drinkKey] = componentInteraction.values[0].split('_');
-                        const embed = createDrinkDetailEmbed(categoryKey, drinkKey, 1);
-                        const buttons = createBrewingButtons(categoryKey, drinkKey, 1);
                         
-                        await componentInteraction.editReply({
-                            embeds: [embed],
-                            components: buttons
-                        });
-
-                    } else if (componentInteraction.customId.startsWith('brew_amount_')) {
-                        // Handle amount changes
-                        const parts = componentInteraction.customId.split('_');
-                        const action = parts[2]; // increase or decrease
-                        const categoryKey = parts[3];
-                        const drinkKey = parts[4];
-                        let amount = parseInt(parts[5]);
-
-                        if (action === 'increase' && amount < 10) {
-                            amount++;
-                        } else if (action === 'decrease' && amount > 1) {
-                            amount--;
+                    } else if (buttonInteraction.customId.startsWith('view_recipe_')) {
+                        // Show recipe details
+                        const recipeId = buttonInteraction.customId.replace('view_recipe_', '');
+                        const recipe = potionRecipes.find(r => r.id === recipeId);
+                        
+                        if (recipe) {
+                            const embed = createDetailEmbed(recipe);
+                            const components = createActionButtons(recipe);
+                            await buttonInteraction.editReply({ embeds: [embed], components });
+                        }
+                        
+                    } else if (buttonInteraction.customId.startsWith('brew_')) {
+                        // Attempt to brew potion
+                        const recipeId = buttonInteraction.customId.replace('brew_', '');
+                        const recipe = potionRecipes.find(r => r.id === recipeId);
+                        
+                        if (!recipe) {
+                            throw new Error('Recipe not found');
                         }
 
-                        const embed = createDrinkDetailEmbed(categoryKey, drinkKey, amount);
-                        const buttons = createBrewingButtons(categoryKey, drinkKey, amount);
-                        
-                        await componentInteraction.editReply({
-                            embeds: [embed],
-                            components: buttons
-                        });
+                        const userItems = userProfile.items || {};
+                        const canBrew = hasRequiredIngredients(recipe, userItems) && 
+                                       (userProfile.coins || 0) >= recipe.cost;
 
-                    } else if (componentInteraction.customId.startsWith('brew_drink_')) {
-                        // Handle brewing
-                        const parts = componentInteraction.customId.split('_');
-                        const categoryKey = parts[2];
-                        const drinkKey = parts[3];
-                        const amount = parseInt(parts[4]);
-                        
-                        const recipe = brewingCategories[categoryKey].recipes[drinkKey];
-                        
-                        if (!canBrewDrink(recipe, amount)) {
+                        if (!canBrew) {
                             const errorEmbed = new EmbedBuilder()
                                 .setColor('#FF0000')
                                 .setTitle('❌ Brewing Failed')
-                                .setDescription('You don\'t meet the requirements for this recipe!')
-                                .setFooter({ text: 'Check the recipe requirements and try again.' });
-
+                                .setDescription('You don\'t have the required ingredients or coins!')
+                                .setFooter({ text: 'Check the recipe requirements again.' });
+                            
                             const backButton = new ButtonBuilder()
-                                .setCustomId(`brew_back_to_category_${categoryKey}`)
-                                .setLabel('Back')
+                                .setCustomId('back_to_main')
+                                .setLabel('Back to Laboratory')
                                 .setStyle(ButtonStyle.Secondary)
                                 .setEmoji('↩️');
 
-                            await componentInteraction.editReply({
-                                embeds: [errorEmbed],
+                            await buttonInteraction.editReply({ 
+                                embeds: [errorEmbed], 
                                 components: [new ActionRowBuilder().addComponents(backButton)]
                             });
                             return;
                         }
 
-                        // Process brewing
-                        const totalCost = recipe.cost * amount;
-                        const expGained = recipe.exp * amount;
+                        // Process brewing attempt
+                        const alchemyLevel = userProfile.skills?.alchemy || 1;
+                        const levelBonus = Math.floor(alchemyLevel / 2);
+                        const actualSuccessRate = Math.min(recipe.successRate + levelBonus, 95);
+                        const isSuccess = Math.random() * 100 < actualSuccessRate;
 
-                        // Update materials
-                        if (!player.inventory) player.inventory = {};
-                        if (!player.inventory.materials) player.inventory.materials = {};
-                        if (!player.items) player.items = {};
+                        // Deduct ingredients and coins
+                        const updatedItems = { ...userItems };
+                        recipe.ingredients.forEach(ingredient => {
+                            updatedItems[ingredient.key] = (updatedItems[ingredient.key] || 0) - ingredient.required;
+                        });
 
-                        // Remove materials
-                        for (const [material, required] of Object.entries(recipe.ingredients)) {
-                            if (player.inventory.materials[material]) {
-                                player.inventory.materials[material] -= required * amount;
-                            } else if (player.items[material]) {
-                                player.items[material] -= required * amount;
-                            }
-                        }
-
-                        // Remove coins
-                        player.coins = (player.coins || 0) - totalCost;
-
-                        // Add drinks to inventory
-                        if (!player.inventory.drinks) player.inventory.drinks = {};
-                        const drinkKey_full = `${categoryKey}_${drinkKey}`;
-                        player.inventory.drinks[drinkKey_full] = (player.inventory.drinks[drinkKey_full] || 0) + amount;
-
-                        // Update brewing skill
-                        if (!player.skills) player.skills = {};
-                        if (!player.skillExperience) player.skillExperience = {};
-                        
-                        const currentExp = player.skillExperience.brewing || 0;
-                        const newExp = currentExp + expGained;
-                        const currentLevel = player.skills.brewing || 1;
+                        const expGained = isSuccess ? recipe.expReward : Math.floor(recipe.expReward * 0.25);
+                        const newExp = (userProfile.skillExperience?.alchemy || 0) + expGained;
                         const newLevel = Math.floor(newExp / 100) + 1;
 
-                        player.skillExperience.brewing = newExp;
-                        player.skills.brewing = Math.max(newLevel, currentLevel);
-                        player.drinksBrewed = (player.drinksBrewed || 0) + amount;
+                        // Update user profile
+                        const updateData = {
+                            coins: (userProfile.coins || 0) - recipe.cost,
+                            items: updatedItems,
+                            skillExperience: {
+                                ...userProfile.skillExperience,
+                                alchemy: newExp
+                            },
+                            skills: {
+                                ...userProfile.skills,
+                                alchemy: Math.max(newLevel, userProfile.skills?.alchemy || 1)
+                            },
+                            potionsCrafted: (userProfile.potionsCrafted || 0) + (isSuccess ? 1 : 0)
+                        };
 
-                        // Save to database
-                        await db.updatePlayer(userId, player);
+                        // Add potion to inventory if successful
+                        if (isSuccess) {
+                            const potionKey = `potion_${recipe.id}`;
+                            updateData.items[potionKey] = (updateData.items[potionKey] || 0) + 1;
+                        }
 
-                        // Create success embed
-                        const successEmbed = new EmbedBuilder()
-                            .setColor('#00FF00')
-                            .setTitle('✨ Brewing Successful!')
-                            .setDescription(`You successfully brewed ${amount}x **${recipe.name}**!`)
+                        await db.updatePlayer(userId, updateData);
+
+                        // Create result embed
+                        const resultEmbed = new EmbedBuilder()
+                            .setColor(isSuccess ? '#00FF00' : '#FF6B6B')
+                            .setTitle(isSuccess ? '✅ Brewing Successful!' : '❌ Brewing Failed!')
+                            .setDescription(isSuccess ? 
+                                `🎉 You successfully brewed a **${recipe.name}**!\n\n*The potion bubbles with magical energy.*` :
+                                `💥 The mixture exploded! Your ingredients were lost, but you gained some experience.\n\n*Better luck next time, alchemist.*`
+                            )
                             .addFields(
                                 {
-                                    name: '🎁 Rewards',
-                                    value: `**Drinks Added:** ${amount}x ${recipe.name}\n**Experience Gained:** +${expGained} XP${newLevel > currentLevel ? `\n🎊 **Level Up!** Brewing level is now ${newLevel}` : ''}`,
-                                    inline: false
+                                    name: '📈 Experience Gained',
+                                    value: `+${expGained} XP ${newLevel > (userProfile.skills?.alchemy || 1) ? '\n🎊 **Level Up!**' : ''}`,
+                                    inline: true
                                 },
                                 {
-                                    name: '📊 Updated Stats',
-                                    value: `**Remaining Coins:** ${player.coins}\n**Brewing Level:** ${player.skills.brewing}\n**Total Drinks Brewed:** ${player.drinksBrewed}`,
-                                    inline: false
+                                    name: '💰 Coins Spent',
+                                    value: `${recipe.cost} coins`,
+                                    inline: true
                                 }
-                            )
-                            .setFooter({ text: 'Your drinks have been added to your inventory!' })
-                            .setTimestamp();
+                            );
+
+                        if (isSuccess) {
+                            resultEmbed.addFields({
+                                name: '🎁 Reward',
+                                value: `**${recipe.name}** added to inventory\n*${recipe.effect}*`,
+                                inline: false
+                            });
+                        }
 
                         const continueButton = new ButtonBuilder()
-                            .setCustomId('brew_back_to_main')
+                            .setCustomId('back_to_main')
                             .setLabel('Continue Brewing')
                             .setStyle(ButtonStyle.Primary)
-                            .setEmoji('🍺');
+                            .setEmoji('🧪');
 
-                        await componentInteraction.editReply({
-                            embeds: [successEmbed],
+                        await buttonInteraction.editReply({ 
+                            embeds: [resultEmbed], 
                             components: [new ActionRowBuilder().addComponents(continueButton)]
-                        });
-
-                    } else if (componentInteraction.customId.startsWith('brew_back_to_category_')) {
-                        // Return to category view
-                        const categoryKey = componentInteraction.customId.replace('brew_back_to_category_', '');
-                        const embed = createCategoryEmbed(categoryKey);
-                        
-                        // Recreate recipe selection menu
-                        const recipes = brewingCategories[categoryKey].recipes;
-                        const recipeOptions = Object.entries(recipes).map(([key, recipe]) => {
-                            const canBrew = canBrewDrink(recipe, 1);
-                            const brewingLevel = getPlayerBrewingLevel();
-                            
-                            return {
-                                label: recipe.name,
-                                description: `${recipe.rarity} • Lv.${recipe.level} • ${recipe.cost} coins`,
-                                value: `${categoryKey}_${key}`,
-                                emoji: canBrew ? '✅' : (brewingLevel < recipe.level ? '🔒' : '❌')
-                            };
-                        });
-
-                        const recipeMenu = new StringSelectMenuBuilder()
-                            .setCustomId('select_brew_recipe')
-                            .setPlaceholder('Choose a recipe to brew...')
-                            .addOptions(recipeOptions);
-
-                        const backButton = new ButtonBuilder()
-                            .setCustomId('brew_back_to_main')
-                            .setLabel('Back to Main Menu')
-                            .setStyle(ButtonStyle.Secondary)
-                            .setEmoji('↩️');
-
-                        await componentInteraction.editReply({
-                            embeds: [embed],
-                            components: [
-                                new ActionRowBuilder().addComponents(recipeMenu),
-                                new ActionRowBuilder().addComponents(backButton)
-                            ]
                         });
                     }
 
                 } catch (error) {
-                    console.error('Brew interaction error:', error);
+                    console.error('Brewing interaction error:', error);
                     
                     const errorEmbed = new EmbedBuilder()
                         .setColor('#FF0000')
-                        .setTitle('⚠️ An Error Occurred')
-                        .setDescription('Something went wrong while processing your request. Please try again.');
+                        .setTitle('⚠️ Something Went Wrong')
+                        .setDescription('An error occurred during brewing. Please try again.');
 
                     const backButton = new ButtonBuilder()
-                        .setCustomId('brew_back_to_main')
-                        .setLabel('Back to Main Menu')
+                        .setCustomId('back_to_main')
+                        .setLabel('Back to Laboratory')
                         .setStyle(ButtonStyle.Secondary)
                         .setEmoji('↩️');
 
-                    await componentInteraction.editReply({
-                        embeds: [errorEmbed],
+                    await buttonInteraction.editReply({ 
+                        embeds: [errorEmbed], 
                         components: [new ActionRowBuilder().addComponents(backButton)]
-                    }).catch(() => {});
+                    }).catch(() => {}); // Ignore edit errors
                 }
             });
 
@@ -749,14 +472,14 @@ module.exports = {
                 try {
                     const expiredEmbed = new EmbedBuilder()
                         .setColor('#808080')
-                        .setTitle('🍺 Brewing Session Expired')
+                        .setTitle('🧪 Brewing Session Expired')
                         .setDescription('This brewing session has timed out. Use `/brew` again to start a new session.')
                         .setFooter({ text: 'Session lasted 5 minutes' });
 
-                    await response.edit({
-                        embeds: [expiredEmbed],
-                        components: []
-                    }).catch(() => {}); // Ignore errors if message was deleted
+                    await response.edit({ 
+                        embeds: [expiredEmbed], 
+                        components: [] 
+                    }).catch(() => {}); // Ignore edit errors if message was deleted
                 } catch (error) {
                     // Silently handle cleanup errors
                 }
@@ -767,14 +490,13 @@ module.exports = {
             
             const errorEmbed = new EmbedBuilder()
                 .setColor('#FF0000')
-                .setTitle('⚠️ Brewing Error')
-                .setDescription('Something went wrong while setting up the brewing system. Please try again later.')
-                .addFields({
-                    name: 'Error Details',
+                .setTitle('⚠️ Alchemy Laboratory Error')
+                .setDescription('Something went wrong while setting up the brewing laboratory. Please try again later.')
+                .addFields({ 
+                    name: 'Error Details', 
                     value: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
-                    inline: false
-                })
-                .setFooter({ text: 'If this persists, contact support' });
+                    inline: false 
+                });
 
             if (interaction.deferred || interaction.replied) {
                 await interaction.editReply({ embeds: [errorEmbed], components: [] }).catch(() => {});

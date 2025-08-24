@@ -97,36 +97,25 @@ module.exports = {
                 const confirmation = await response.awaitMessageComponent({ filter, time: 30000 });
 
                 if (confirmation.customId === 'repair_confirm') {
-                    // Show repair progress
-                    const progressEmbed = new EmbedBuilder()
-                        .setColor('#FF8C00')
-                        .setTitle('🔧 Repairing Item...')
-                        .setDescription('The blacksmith works diligently to restore your equipment...')
-                        .addFields({ name: 'Progress', value: '█████░░░░░ 50%', inline: false });
+                    // Update item durability and player coins
+                    item.durability = item.maxDurability;
+                    player.coins -= totalCost;
 
-                    await confirmation.update({ embeds: [progressEmbed], components: [] });
+                    await db.updatePlayer(userId, player);
 
-                    // Simulate repair time
-                    setTimeout(async () => {
-                        // Update item durability and player coins
-                        item.durability = item.maxDurability;
-                        player.coins -= totalCost;
+                    const successEmbed = new EmbedBuilder()
+                        .setColor('#00FF00')
+                        .setTitle('✨ Item Repaired!')
+                        .setDescription(`Your ${item.name} has been fully repaired!`)
+                        .addFields(
+                            { name: 'New Durability', value: '100%', inline: true },
+                            { name: 'Remaining Coins', value: `${player.coins}`, inline: true }
+                        );
 
-                        await db.updatePlayer(userId, player);
-
-                        const successEmbed = new EmbedBuilder()
-                            .setColor('#00FF00')
-                            .setTitle('✨ Item Repaired!')
-                            .setDescription(`Your **${item.name}** has been fully repaired!`)
-                            .addFields(
-                                { name: '🔧 New Durability', value: '100% (Perfect Condition)', inline: true },
-                                { name: '💰 Remaining Coins', value: `${player.coins.toLocaleString()}`, inline: true },
-                                { name: '⭐ Quality Bonus', value: 'Item performs at peak efficiency!', inline: true }
-                            )
-                            .setFooter({ text: 'Your equipment is now battle-ready!' });
-
-                        await interaction.editReply({ embeds: [successEmbed], components: [] });
-                    }, 2000);
+                    await confirmation.update({
+                        embeds: [successEmbed],
+                        components: []
+                    });
                 } else {
                     await confirmation.update({
                         content: '❌ Repair cancelled.',

@@ -109,86 +109,52 @@ module.exports = {
                 const confirmation = await response.awaitMessageComponent({ filter, time: 30000 });
 
                 if (confirmation.customId === 'upgrade_confirm') {
-                    // Show upgrade progress animation
-                    const progressEmbed = new EmbedBuilder()
-                        .setColor('#9932CC')
-                        .setTitle('🔮 Upgrading Equipment...')
-                        .setDescription('Mystical energies flow through your equipment...')
-                        .addFields(
-                            { name: 'Phase 1', value: '🔥 Heating materials...', inline: false },
-                            { name: 'Progress', value: '███░░░░░░░ 30%', inline: false }
-                        );
+                    // Remove materials
+                    for (const [material, amount] of Object.entries(materials)) {
+                        player.inventory.materials[material] -= amount;
+                    }
 
-                    await confirmation.update({ embeds: [progressEmbed], components: [] });
+                    // Attempt upgrade
+                    const successRate = Math.max(100 - item.level * 10, 50);
+                    const success = Math.random() * 100 <= successRate;
 
-                    // Phase 2
-                    setTimeout(async () => {
-                        progressEmbed.setFields(
-                            { name: 'Phase 2', value: '⚒️ Infusing magical essence...', inline: false },
-                            { name: 'Progress', value: '██████░░░░ 60%', inline: false }
-                        );
-                        await interaction.editReply({ embeds: [progressEmbed] });
-                    }, 1500);
+                    if (success) {
+                        item.level += 1;
+                        item.attack = Math.floor(item.attack * 1.2);
+                        item.defense = Math.floor(item.defense * 1.2);
 
-                    // Final phase and result
-                    setTimeout(async () => {
-                        progressEmbed.setFields(
-                            { name: 'Phase 3', value: '✨ Finalizing upgrade...', inline: false },
-                            { name: 'Progress', value: '██████████ 100%', inline: false }
-                        );
-                        await interaction.editReply({ embeds: [progressEmbed] });
+                        const successEmbed = new EmbedBuilder()
+                            .setColor('#00FF00')
+                            .setTitle('✨ Upgrade Successful!')
+                            .setDescription(`Your ${item.name} is now level ${item.level}!`)
+                            .addFields(
+                                { name: 'New Attack', value: item.attack.toString(), inline: true },
+                                { name: 'New Defense', value: item.defense.toString(), inline: true }
+                            );
 
-                        // Wait a moment then show results
-                        setTimeout(async () => {
-                            // Remove materials
-                            for (const [material, amount] of Object.entries(materials)) {
-                                player.inventory.materials[material] -= amount;
-                            }
+                        await db.updatePlayer(userId, player);
+                        await confirmation.update({
+                            embeds: [successEmbed],
+                            components: []
+                        });
+                    } else {
+                        const failEmbed = new EmbedBuilder()
+                            .setColor('#FF0000')
+                            .setTitle('💔 Upgrade Failed')
+                            .setDescription('The upgrade attempt was unsuccessful.')
+                            .addFields({
+                                name: 'Materials Lost',
+                                value: Object.entries(materials)
+                                    .map(([mat, amt]) => `${mat}: ${amt}`).join('\n'),
+                                inline: false
+                            });
 
-                            // Attempt upgrade
-                            const successRate = Math.max(100 - item.level * 10, 50);
-                            const success = Math.random() * 100 <= successRate;
-
-                            if (success) {
-                                const oldAttack = item.attack;
-                                const oldDefense = item.defense;
-
-                                item.level += 1;
-                                item.attack = Math.floor(item.attack * 1.2);
-                                item.defense = Math.floor(item.defense * 1.2);
-
-                                const successEmbed = new EmbedBuilder()
-                                    .setColor('#FFD700')
-                                    .setTitle('🌟 Upgrade Successful!')
-                                    .setDescription(`Your **${item.name}** radiates with newfound power!`)
-                                    .addFields(
-                                        { name: '⬆️ New Level', value: `${item.level}`, inline: true },
-                                        { name: '⚔️ Attack Power', value: `${oldAttack} → **${item.attack}** (+${item.attack - oldAttack})`, inline: true },
-                                        { name: '🛡️ Defense Power', value: `${oldDefense} → **${item.defense}** (+${item.defense - oldDefense})`, inline: true },
-                                        { name: '✨ Special Effect', value: item.level >= 5 ? 'Glowing Aura Activated!' : 'Enhanced Durability', inline: false }
-                                    )
-                                    .setFooter({ text: `Next upgrade chance: ${Math.max(100 - item.level * 10, 50)}%` });
-
-                                await db.updatePlayer(userId, player);
-                                await interaction.editReply({ embeds: [successEmbed], components: [] });
-                            } else {
-                                const failEmbed = new EmbedBuilder()
-                                    .setColor('#8B0000')
-                                    .setTitle('💔 Upgrade Failed')
-                                    .setDescription('The mystical energies were too unstable...')
-                                    .addFields(
-                                        { name: '⚠️ Result', value: 'The upgrade attempt failed, but your item remains intact', inline: false },
-                                        { name: '📉 Materials Lost', value: Object.entries(materials)
-                                            .map(([mat, amt]) => `${mat}: ${amt}`).join('\n'), inline: true },
-                                        { name: '🎯 Next Attempt', value: `Success chance: ${Math.max(100 - item.level * 10, 50)}%`, inline: true },
-                                        { name: '💡 Tip', value: 'Consider using enhancement crystals to improve success rates', inline: false }
-                                    );
-
-                                await db.updatePlayer(userId, player);
-                                await interaction.editReply({ embeds: [failEmbed], components: [] });
-                            }
-                        }, 1000);
-                    }, 1500);
+                        await db.updatePlayer(userId, player);
+                        await confirmation.update({
+                            embeds: [failEmbed],
+                            components: []
+                        });
+                    }
                 } else {
                     await confirmation.update({
                         content: '❌ Upgrade cancelled.',

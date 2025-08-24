@@ -194,62 +194,13 @@ module.exports = {
                         .setDisabled(room.level >= roomCosts[room.type].maxLevel);
                 });
 
-                const rows = [];
-                for (let i = 0; i < buttons.length; i += 5) {
-                    rows.push(new ActionRowBuilder()
-                        .addComponents(buttons.slice(i, i + 5)));
-                }
+                const row = new ActionRowBuilder()
+                    .addComponents(buttons);
 
-                const response = await interaction.editReply({
+                await interaction.editReply({
                     embeds: [embed],
-                    components: rows
+                    components: [row]
                 });
-
-                const filter = i => i.user.id === interaction.user.id;
-                try {
-                    const upgradeSelection = await response.awaitMessageComponent({ filter, time: 30000 });
-
-                    if (upgradeSelection.customId.startsWith('upgrade_')) {
-                        const roomType = upgradeSelection.customId.replace('upgrade_', '');
-                        const room = player.housing.rooms.find(r => r.type === roomType);
-                        const roomData = roomCosts[roomType];
-                        const upgradeCost = roomData.cost * room.level;
-
-                        if (player.coins < upgradeCost) {
-                            await upgradeSelection.update({
-                                content: `❌ You need ${upgradeCost} coins to upgrade this room!`,
-                                embeds: [],
-                                components: []
-                            });
-                            return;
-                        }
-
-                        player.coins -= upgradeCost;
-                        room.level++;
-                        await db.updatePlayer(userId, player);
-
-                        const successEmbed = new EmbedBuilder()
-                            .setColor('#00FF00')
-                            .setTitle('⬆️ Room Upgraded!')
-                            .setDescription(`Your ${roomType} has been upgraded to level ${room.level}!`)
-                            .addFields(
-                                { name: 'Cost', value: `${upgradeCost} coins`, inline: true },
-                                { name: 'New Level', value: room.level.toString(), inline: true },
-                                { name: 'Remaining Coins', value: player.coins.toString(), inline: true }
-                            );
-
-                        await upgradeSelection.update({
-                            embeds: [successEmbed],
-                            components: []
-                        });
-                    }
-                } catch (e) {
-                    await interaction.editReply({
-                        content: '❌ Upgrade menu expired.',
-                        embeds: [],
-                        components: []
-                    });
-                }
 
             } else if (subcommand === 'view') {
                 const embed = new EmbedBuilder()

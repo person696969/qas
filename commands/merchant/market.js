@@ -15,7 +15,7 @@ const MARKET_CATEGORIES = {
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('market')
+        .setName('marketplace')
         .setDescription('🏪 Access the player-driven marketplace')
         .addSubcommand(subcommand =>
             subcommand

@@ -1,4 +1,3 @@
-
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const config = require('../../config.js');
 const db = require('../../database.js');
@@ -86,7 +85,7 @@ module.exports = {
     async handleCreate(interaction) {
         const guildName = interaction.options.getString('name');
         const description = interaction.options.getString('description') || 'A new treasure hunting guild';
-        
+
         const userData = await db.getPlayer(interaction.user.id);
         if (userData?.guild) {
             return await interaction.reply({
@@ -192,7 +191,7 @@ module.exports = {
 
     async handleInfo(interaction) {
         const guildName = interaction.options.getString('guild');
-        
+
         let guildData;
         if (guildName) {
             guildData = await db.getGuildByName(guildName);
@@ -268,7 +267,7 @@ module.exports = {
 
         const buttons = new ActionRowBuilder();
         const userData = await db.getPlayer(interaction.user.id);
-        
+
         if (userData?.guild === guildData.id) {
             // User is in this guild
             buttons.addComponents(
@@ -424,7 +423,7 @@ module.exports = {
         async members(interaction) {
             const userData = await db.getPlayer(interaction.user.id);
             const guildData = await db.getGuild(userData.guild);
-            
+
             if (!guildData) {
                 return await interaction.reply({
                     content: '❌ Guild not found!',
@@ -486,7 +485,7 @@ module.exports = {
     selectMenuHandlers: {
         async manage_select(interaction) {
             const option = interaction.values[0];
-            
+
             switch (option) {
                 case 'members':
                     await this.handleMemberManagement(interaction);
@@ -548,7 +547,7 @@ module.exports = {
     async handleJoin(interaction) {
         const guildName = interaction.options.getString('guild');
         const userData = await db.getPlayer(interaction.user.id);
-        
+
         if (userData?.guild) {
             return await interaction.reply({
                 content: '❌ You\'re already in a guild! Leave your current guild first.',
@@ -613,12 +612,12 @@ module.exports = {
         // Remove user from guild
         guildData.members = guildData.members.filter(id => id !== interaction.user.id);
         guildData.officers = guildData.officers.filter(id => id !== interaction.user.id);
-        
+
         await db.updateGuild(guildData.id, { 
             members: guildData.members,
             officers: guildData.officers
         });
-        
+
         await db.updatePlayer(interaction.user.id, { 
             guild: null,
             guildRole: null

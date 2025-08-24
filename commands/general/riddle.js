@@ -1,6 +1,6 @@
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const db = require('../../database.js');
+const { db } = require('../../database.js');
 const config = require('../../config.js');
 
 const riddles = [
@@ -38,27 +38,6 @@ const riddles = [
         hint: "You're probably looking at one right now!",
         difficulty: "hard",
         reward: 200
-    },
-    {
-        question: "I am taken from a mine and shut in a wooden case, from which I am never released. What am I?",
-        answer: "pencil",
-        hint: "I help you write and draw!",
-        difficulty: "hard",
-        reward: 200
-    },
-    {
-        question: "I disappear every time you say my name. What am I?",
-        answer: "silence",
-        hint: "I'm the absence of sound!",
-        difficulty: "expert",
-        reward: 300
-    },
-    {
-        question: "I am the beginning of everything, the end of everywhere. I'm the beginning of eternity, the end of time and space. What am I?",
-        answer: "e",
-        hint: "Look at the first letter of certain words!",
-        difficulty: "expert",
-        reward: 400
     }
 ];
 
@@ -70,11 +49,10 @@ module.exports = {
             option.setName('difficulty')
                 .setDescription('Choose difficulty level')
                 .addChoices(
-                    { name: '🟢 Easy (50 coins)', value: 'easy' },
-                    { name: '🟡 Medium (100 coins)', value: 'medium' },
-                    { name: '🔴 Hard (200 coins)', value: 'hard' },
-                    { name: '⚫ Expert (300-400 coins)', value: 'expert' },
-                    { name: '🎲 Random', value: 'random' }
+                    { name: 'Easy', value: 'easy' },
+                    { name: 'Medium', value: 'medium' },
+                    { name: 'Hard', value: 'hard' },
+                    { name: 'Random', value: 'random' }
                 )
         ),
 
@@ -92,11 +70,6 @@ module.exports = {
     },
 
     async showRiddle(interaction, difficulty = 'random') {
-        // Initialize activeRiddles if it doesn't exist
-        if (!this.activeRiddles) {
-            this.activeRiddles = new Map();
-        }
-
         // Filter riddles by difficulty or pick random
         let availableRiddles = riddles;
         if (difficulty !== 'random') {
@@ -108,60 +81,46 @@ module.exports = {
         const difficultyEmoji = {
             easy: '🟢',
             medium: '🟡', 
-            hard: '🔴',
-            expert: '⚫'
-        };
-
-        const difficultyColors = {
-            easy: '#4CAF50',
-            medium: '#FF9800',
-            hard: '#F44336',
-            expert: '#9C27B0'
+            hard: '🔴'
         };
 
         const embed = new EmbedBuilder()
-            .setColor(difficultyColors[selectedRiddle.difficulty] || config.embedColors?.primary || '#7289da')
-            .setTitle('🧩 Mystery Riddle Challenge')
-            .setDescription(`**${difficultyEmoji[selectedRiddle.difficulty]} ${selectedRiddle.difficulty.toUpperCase()} DIFFICULTY**\n\n*"${selectedRiddle.question}"*`)
+            .setColor(config.embedColors?.primary || '#7289da')
+            .setTitle('🧩 Treasure Hunter Riddle')
+            .setDescription(`**${difficultyEmoji[selectedRiddle.difficulty]} ${selectedRiddle.difficulty.toUpperCase()} DIFFICULTY**\n\n${selectedRiddle.question}`)
             .addFields([
                 { name: '💰 Reward', value: `${selectedRiddle.reward} coins`, inline: true },
                 { name: '🎯 Difficulty', value: selectedRiddle.difficulty, inline: true },
-                { name: '💡 Status', value: 'Awaiting your answer...', inline: true },
-                { name: '🏆 Bonus Info', value: '• Quick answers get time bonus\n• First try gives full reward\n• Hints reduce reward by 30%', inline: false }
+                { name: '💡 Status', value: 'Thinking...', inline: true }
             ])
-            .setFooter({ text: 'Use the buttons below to interact!' })
-            .setTimestamp()
-            .setThumbnail('https://cdn.discordapp.com/emojis/🧩.png');
+            .setFooter({ text: 'Type your answer or use the buttons below!' })
+            .setTimestamp();
 
         const buttons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId(`riddle_answer_${interaction.user.id}`)
                     .setLabel('📝 Submit Answer')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('📝'),
+                    .setStyle(ButtonStyle.Primary),
                 new ButtonBuilder()
                     .setCustomId(`riddle_hint_${interaction.user.id}`)
                     .setLabel('💡 Get Hint')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('💡'),
+                    .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId(`riddle_skip_${interaction.user.id}`)
                     .setLabel('⏭️ Skip Riddle')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('⏭️'),
+                    .setStyle(ButtonStyle.Danger),
                 new ButtonBuilder()
-                    .setCustomId(`riddle_stats_${interaction.user.id}`)
-                    .setLabel('📊 My Stats')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('📊')
+                    .setCustomId(`riddle_new_${interaction.user.id}`)
+                    .setLabel('🔄 New Riddle')
+                    .setStyle(ButtonStyle.Success)
             );
 
         const difficultySelect = new ActionRowBuilder()
             .addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId(`riddle_difficulty_${interaction.user.id}`)
-                    .setPlaceholder('🎯 Choose difficulty for next riddle')
+                    .setPlaceholder('Choose difficulty for next riddle')
                     .addOptions([
                         {
                             label: 'Easy',
@@ -182,12 +141,6 @@ module.exports = {
                             emoji: '🔴'
                         },
                         {
-                            label: 'Expert',
-                            description: 'Master level riddles (300-400 coins)',
-                            value: 'expert',
-                            emoji: '⚫'
-                        },
-                        {
                             label: 'Random',
                             description: 'Surprise me!',
                             value: 'random',
@@ -197,12 +150,12 @@ module.exports = {
             );
 
         // Store riddle data for this user
+        this.activeRiddles = this.activeRiddles || new Map();
         this.activeRiddles.set(interaction.user.id, {
             riddle: selectedRiddle,
             attempts: 0,
             hintUsed: false,
-            startTime: Date.now(),
-            maxAttempts: 3
+            startTime: Date.now()
         });
 
         const response = { embeds: [embed], components: [buttons, difficultySelect] };
@@ -211,161 +164,6 @@ module.exports = {
             await interaction.editReply(response);
         } else {
             await interaction.reply(response);
-        }
-
-        // Set up component collector
-        const filter = i => i.user.id === interaction.user.id;
-        const collector = interaction.channel.createMessageComponentCollector({ filter, time: 300000 });
-
-        collector.on('collect', async buttonInteraction => {
-            try {
-                if (buttonInteraction.isButton()) {
-                    await this.handleButtonInteraction(buttonInteraction);
-                } else if (buttonInteraction.isStringSelectMenu()) {
-                    await this.handleSelectMenu(buttonInteraction);
-                }
-            } catch (error) {
-                console.error('Error handling riddle interaction:', error);
-                await buttonInteraction.reply({
-                    content: '❌ An error occurred while processing your interaction.',
-                    ephemeral: true
-                });
-            }
-        });
-
-        collector.on('end', () => {
-            if (this.activeRiddles && this.activeRiddles.has(interaction.user.id)) {
-                this.activeRiddles.delete(interaction.user.id);
-            }
-        });
-    },
-
-    async handleButtonInteraction(interaction) {
-        const customId = interaction.customId;
-        const userId = interaction.user.id;
-
-        if (customId === `riddle_answer_${userId}`) {
-            const modal = new ModalBuilder()
-                .setCustomId(`riddle_answer_modal_${userId}`)
-                .setTitle('Submit Your Answer');
-
-            const answerInput = new TextInputBuilder()
-                .setCustomId('riddle_answer_input')
-                .setLabel('Your Answer')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Type your answer here...')
-                .setRequired(true)
-                .setMaxLength(100);
-
-            const actionRow = new ActionRowBuilder().addComponents(answerInput);
-            modal.addComponents(actionRow);
-
-            await interaction.showModal(modal);
-
-        } else if (customId === `riddle_hint_${userId}`) {
-            await this.showHint(interaction);
-        } else if (customId === `riddle_skip_${userId}`) {
-            await this.skipRiddle(interaction);
-        } else if (customId === `riddle_stats_${userId}`) {
-            await this.showStats(interaction);
-        }
-    },
-
-    async handleSelectMenu(interaction) {
-        const selectedDifficulty = interaction.values[0];
-        await this.showRiddle(interaction, selectedDifficulty);
-    },
-
-    async showHint(interaction) {
-        const riddleData = this.activeRiddles?.get(interaction.user.id);
-        if (!riddleData) {
-            await interaction.reply({
-                content: '❌ No active riddle found!',
-                ephemeral: true
-            });
-            return;
-        }
-
-        if (riddleData.hintUsed) {
-            await interaction.reply({
-                content: `💡 **Hint:** ${riddleData.riddle.hint}\n\n*(You already used your hint for this riddle)*`,
-                ephemeral: true
-            });
-            return;
-        }
-
-        riddleData.hintUsed = true;
-
-        const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle('💡 Hint Revealed!')
-            .setDescription(`**Hint:** *${riddleData.riddle.hint}*`)
-            .addFields([
-                { name: '⚠️ Penalty', value: 'Using hints reduces your reward by 30%', inline: false },
-                { name: '🎯 Attempts Left', value: `${riddleData.maxAttempts - riddleData.attempts}`, inline: true }
-            ])
-            .setFooter({ text: 'Good luck solving the riddle!' });
-
-        await interaction.reply({ embeds: [embed], ephemeral: true });
-    },
-
-    async skipRiddle(interaction) {
-        const riddleData = this.activeRiddles?.get(interaction.user.id);
-        if (!riddleData) {
-            await interaction.reply({
-                content: '❌ No active riddle found!',
-                ephemeral: true
-            });
-            return;
-        }
-
-        const embed = new EmbedBuilder()
-            .setColor('#FF6B35')
-            .setTitle('⏭️ Riddle Skipped')
-            .setDescription(`The answer was: **${riddleData.riddle.answer}**`)
-            .addFields([
-                { name: '💰 Missed Reward', value: `${riddleData.riddle.reward} coins`, inline: true },
-                { name: '🎯 Attempts Made', value: `${riddleData.attempts}`, inline: true },
-                { name: '💡 Learning', value: 'Try to solve the next one!', inline: true }
-            ]);
-
-        const newRiddleButton = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`riddle_new_${interaction.user.id}`)
-                    .setLabel('🧩 Try Another Riddle')
-                    .setStyle(ButtonStyle.Primary)
-            );
-
-        this.activeRiddles.delete(interaction.user.id);
-        await interaction.update({ embeds: [embed], components: [newRiddleButton] });
-    },
-
-    async showStats(interaction) {
-        try {
-            const userData = await db.getPlayer(interaction.user.id);
-            
-            const embed = new EmbedBuilder()
-                .setColor('#4CAF50')
-                .setTitle('📊 Your Riddle Statistics')
-                .addFields([
-                    { name: '🧩 Riddles Solved', value: `${userData.statistics?.riddlesSolved || 0}`, inline: true },
-                    { name: '💰 Coins Earned', value: `${userData.statistics?.coinsFromRiddles || 0}`, inline: true },
-                    { name: '🎯 Success Rate', value: '85%', inline: true },
-                    { name: '🏆 Best Streak', value: `${userData.statistics?.bestRiddleStreak || 0}`, inline: true },
-                    { name: '⚡ Average Time', value: '45 seconds', inline: true },
-                    { name: '💡 Hints Used', value: `${userData.statistics?.hintsUsed || 0}`, inline: true }
-                ])
-                .setFooter({ text: 'Keep solving to improve your stats!' })
-                .setTimestamp();
-
-            await interaction.reply({ embeds: [embed], ephemeral: true });
-        } catch (error) {
-            console.error('Error fetching riddle stats:', error);
-            await interaction.reply({
-                content: '❌ Error fetching your stats.',
-                ephemeral: true
-            });
         }
     },
 
@@ -388,7 +186,7 @@ module.exports = {
         const isCorrect = userAnswer === correctAnswer || userAnswer.includes(correctAnswer);
 
         if (isCorrect) {
-            // Calculate reward
+            // Calculate reward (reduced if hint was used)
             let reward = riddle.reward;
             if (riddleData.hintUsed) reward = Math.floor(reward * 0.7);
 
@@ -396,15 +194,14 @@ module.exports = {
             const timeBonus = timeTaken < 30 ? Math.floor(reward * 0.2) : 0;
             const totalReward = reward + timeBonus;
 
-            // Update user data
+            // Update user coins
             try {
                 const userData = await db.getPlayer(interaction.user.id);
                 await db.updatePlayer(interaction.user.id, { 
                     coins: userData.coins + totalReward,
                     statistics: {
                         ...userData.statistics,
-                        riddlesSolved: (userData.statistics?.riddlesSolved || 0) + 1,
-                        coinsFromRiddles: (userData.statistics?.coinsFromRiddles || 0) + totalReward
+                        riddlesSolved: (userData.statistics?.riddlesSolved || 0) + 1
                     }
                 });
             } catch (error) {
@@ -412,16 +209,16 @@ module.exports = {
             }
 
             const embed = new EmbedBuilder()
-                .setColor('#00FF00')
+                .setColor(config.embedColors?.success || '#00ff00')
                 .setTitle('🎉 Correct Answer!')
                 .setDescription(`**"${riddle.answer}"** is the correct answer!`)
                 .addFields([
-                    { name: '💰 Base Reward', value: `${riddle.reward} coins`, inline: true },
-                    { name: '⚡ Time Bonus', value: timeBonus > 0 ? `+${timeBonus} coins` : 'None', inline: true },
-                    { name: '💡 Hint Penalty', value: riddleData.hintUsed ? '-30%' : 'None', inline: true },
-                    { name: '🏆 Total Earned', value: `${totalReward} coins`, inline: true },
+                    { name: '💰 Coins Earned', value: `${totalReward}`, inline: true },
                     { name: '🎯 Attempts', value: `${riddleData.attempts}`, inline: true },
-                    { name: '⏱️ Time', value: `${timeTaken}s`, inline: true }
+                    { name: '⏱️ Time Taken', value: `${timeTaken}s`, inline: true },
+                    { name: '💡 Hint Used', value: riddleData.hintUsed ? 'Yes (-30%)' : 'No', inline: true },
+                    { name: '⚡ Time Bonus', value: timeBonus > 0 ? `+${timeBonus} coins` : 'None', inline: true },
+                    { name: '🏆 Total Reward', value: `${totalReward} coins`, inline: true }
                 ])
                 .setTimestamp();
 
@@ -437,47 +234,148 @@ module.exports = {
                         .setStyle(ButtonStyle.Secondary)
                 );
 
+            // Clean up active riddle
+            this.activeRiddles.delete(interaction.user.id);
+
+            await interaction.update({ embeds: [embed], components: [newRiddleButton] });
+        } else {
+            const embed = new EmbedBuilder()
+                .setColor(config.embedColors?.error || '#ff0000')
+                .setTitle('❌ Incorrect Answer')
+                .setDescription(`"${answer}" is not the correct answer. Try again!`)
+                .addFields([
+                    { name: '🎯 Attempts', value: `${riddleData.attempts}`, inline: true },
+                    { name: '💡 Need Help?', value: 'Click the hint button!', inline: true }
+                ]);
+
+            await interaction.followUp({ embeds: [embed], ephemeral: true });
+        }
+    },
+
+    // Button handlers
+    buttonHandlers: {
+        answer: async function(interaction) {
+            const modal = new ModalBuilder()
+                .setCustomId(`riddle_answer_modal_${interaction.user.id}`)
+                .setTitle('Submit Your Answer');
+
+            const answerInput = new TextInputBuilder()
+                .setCustomId('riddle_answer_input')
+                .setLabel('Your Answer')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Type your answer here...')
+                .setRequired(true)
+                .setMaxLength(100);
+
+            const actionRow = new ActionRowBuilder().addComponents(answerInput);
+            modal.addComponents(actionRow);
+
+            await interaction.showModal(modal);
+        },
+
+        hint: async function(interaction) {
+            const riddleData = this.activeRiddles?.get(interaction.user.id);
+            if (!riddleData) {
+                await interaction.reply({
+                    content: '❌ No active riddle found!',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            if (riddleData.hintUsed) {
+                await interaction.reply({
+                    content: `💡 **Hint:** ${riddleData.riddle.hint}\n\n*(You already used your hint for this riddle)*`,
+                    ephemeral: true
+                });
+                return;
+            }
+
+            riddleData.hintUsed = true;
+
+            const embed = new EmbedBuilder()
+                .setColor(config.embedColors?.warning || '#ffaa00')
+                .setTitle('💡 Hint Revealed!')
+                .setDescription(riddleData.riddle.hint)
+                .setFooter({ text: 'Note: Using hints reduces your reward by 30%' });
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
+        },
+
+        skip: async function(interaction) {
+            const riddleData = this.activeRiddles?.get(interaction.user.id);
+            if (!riddleData) {
+                await interaction.reply({
+                    content: '❌ No active riddle found!',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            const embed = new EmbedBuilder()
+                .setColor(config.embedColors?.warning || '#ffaa00')
+                .setTitle('⏭️ Riddle Skipped')
+                .setDescription(`The answer was: **${riddleData.riddle.answer}**`)
+                .addFields([
+                    { name: '💰 Missed Reward', value: `${riddleData.riddle.reward} coins`, inline: true },
+                    { name: '🎯 Attempts Made', value: `${riddleData.attempts}`, inline: true }
+                ]);
+
+            const newRiddleButton = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`riddle_new_${interaction.user.id}`)
+                        .setLabel('🧩 Try Another Riddle')
+                        .setStyle(ButtonStyle.Primary)
+                );
+
             this.activeRiddles.delete(interaction.user.id);
             await interaction.update({ embeds: [embed], components: [newRiddleButton] });
+        },
 
-        } else {
-            const attemptsLeft = riddleData.maxAttempts - riddleData.attempts;
-            
-            if (attemptsLeft <= 0) {
-                // No attempts left
+        new: async function(interaction) {
+            await this.showRiddle(interaction, 'random');
+        },
+
+        stats: async function(interaction) {
+            try {
+                const userData = await db.getPlayer(interaction.user.id);
+                
                 const embed = new EmbedBuilder()
-                    .setColor('#FF0000')
-                    .setTitle('💀 Out of Attempts!')
-                    .setDescription(`The correct answer was: **${riddle.answer}**`)
+                    .setColor(config.embedColors?.info || '#0099ff')
+                    .setTitle('📊 Your Riddle Statistics')
                     .addFields([
-                        { name: '❌ Your Answer', value: `"${answer}"`, inline: true },
-                        { name: '🎯 Attempts Used', value: `${riddleData.attempts}`, inline: true }
-                    ]);
+                        { name: '🧩 Riddles Solved', value: `${userData.statistics?.riddlesSolved || 0}`, inline: true },
+                        { name: '💰 Coins Earned', value: `${userData.statistics?.coinsFromRiddles || 0}`, inline: true },
+                        { name: '🎯 Success Rate', value: '85%', inline: true }
+                    ])
+                    .setTimestamp();
 
-                const newRiddleButton = new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`riddle_new_${interaction.user.id}`)
-                            .setLabel('🧩 Try Another Riddle')
-                            .setStyle(ButtonStyle.Primary)
-                    );
-
-                this.activeRiddles.delete(interaction.user.id);
-                await interaction.update({ embeds: [embed], components: [newRiddleButton] });
-
-            } else {
-                // Wrong answer but attempts remaining
-                const embed = new EmbedBuilder()
-                    .setColor('#FF9800')
-                    .setTitle('❌ Incorrect Answer')
-                    .setDescription(`"${answer}" is not correct. Keep trying!`)
-                    .addFields([
-                        { name: '🎯 Attempts Left', value: `${attemptsLeft}`, inline: true },
-                        { name: '💡 Need Help?', value: 'Use the hint button!', inline: true }
-                    ]);
-
-                await interaction.followUp({ embeds: [embed], ephemeral: true });
+                await interaction.reply({ embeds: [embed], ephemeral: true });
+            } catch (error) {
+                console.error('Error fetching riddle stats:', error);
+                await interaction.reply({
+                    content: '❌ Error fetching your stats.',
+                    ephemeral: true
+                });
             }
+        }
+    },
+
+    // Modal handler for answer submission
+    modalHandlers: {
+        answer_modal: async function(interaction) {
+            const answer = interaction.fields.getTextInputValue('riddle_answer_input');
+            await interaction.deferUpdate();
+            await this.checkAnswer(interaction, answer);
+        }
+    },
+
+    // Select menu handler for difficulty
+    selectMenuHandlers: {
+        difficulty: async function(interaction) {
+            const selectedDifficulty = interaction.values[0];
+            await this.showRiddle(interaction, selectedDifficulty);
         }
     }
 };
